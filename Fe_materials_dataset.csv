@@ -1,0 +1,5 @@
+material_id,band_gap_mp,formation_energy_per_atom_mp,is_metal,dos_at_fermi,formula_pretty,num_elements,elements,density_pg,volume_pg,volume_per_atom_pg,spacegroup_number_pg,crystal_system_pg,lattice_a_pg,lattice_b_pg,lattice_c_pg,lattice_alpha_pg,lattice_beta_pg,lattice_gamma_pg,num_sites_pg,target_band_gap,target_formation_energy,target_is_metal,target_dos_at_fermi
+mp-19017,0.0,-4.750,True,2.53,Fe,1,"Fe",7.85,11.79,11.79,229,"cubic",2.86,2.86,2.86,90.0,90.0,90.0,1,0.0,-4.750,True,2.53
+mp-13,0.672,-2.581,False,0.0,FeS2,2,"Fe,S",4.76,38.84,12.95,205,"cubic",5.41,5.41,5.41,90.0,90.0,90.0,3,0.672,-2.581,False,0.0
+mp-22862,0.0,-6.123,True,3.12,Fe3C,2,"C,Fe",7.69,85.20,10.65,62,"orthorhombic",5.09,6.75,4.52,90.0,90.0,90.0,8,0.0,-6.123,True,3.12
+mp-testoxide,1.5,-3.0,False,0.0,Fe2O3,2,"Fe,O",5.24,100.0,20.0,167,"trigonal",5.0,5.0,13.0,90.0,90.0,120.0,10,1.5,-3.0,False,0.0
