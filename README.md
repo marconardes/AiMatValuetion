@@ -11,12 +11,14 @@ This project is a Tkinter GUI application designed as a prototype for predicting
 ## Core Components and Workflow
 
 The project is structured into several key components:
-*   **Data Acquisition Scripts (`fetch_mp_data.py`, `process_raw_data.py`):** For creating and preparing the dataset.
-*   **Model Training Script (`train_model.py`):** For training ML models from the dataset.
-*   **GUI Application (`material_predictor_gui.py`):** The main user interface.
-*   **Configuration File (`config.yml`):** For managing all important settings and parameters.
-*   **Utilities (`utils/`):** Contains shared modules for configuration loading (`config_loader.py`) and data schemas (`schema.py`).
-*   **Tests (`tests/`):** Includes unit and integration tests to ensure code reliability.
+*   **Data Acquisition Scripts (`fetch_mp_data.py`, `process_raw_data.py`):** These scripts handle the creation and preparation of the dataset from external sources like the Materials Project.
+*   **Model Training Script (`train_model.py`):** This script is responsible for training machine learning models using the processed dataset.
+*   **GUI Application (`material_predictor_gui.py`):** Provides the main user interface for interacting with the prediction models and managing data.
+*   **Configuration File (`config.yml`):** A central YAML file for managing all important operational settings, file paths, API keys, and model parameters. This improves maintainability by separating settings from code, making it easier for users to adapt the project to their needs or different environments without altering Python scripts.
+*   **Utilities (`utils/`):** This directory contains shared Python modules:
+    *   `config_loader.py`: Provides a standardized way to load the `config.yml` file, ensuring consistent access to configuration parameters across all scripts and handling potential errors like missing files or malformed YAML.
+    *   `schema.py`: Centralizes the definitions of data structures, such as `DATA_SCHEMA` (used in data fetching and processing to define expected fields and their descriptions) and `MANUAL_ENTRY_CSV_HEADERS` (used in the GUI for manual data input to ensure CSV compatibility). This avoids redundancy and ensures consistency in how data is structured and interpreted throughout the project.
+*   **Tests (`tests/`):** This directory houses all test files. Unit tests focus on individual modules and functions, using mocking to isolate components (e.g., API calls, file system interactions). Integration tests verify that different parts of the system work together as expected, such as the complete data processing pipeline from data fetching through model training.
 
 The general workflow involves:
 
@@ -93,13 +95,14 @@ The general workflow involves:
 
 ## Configuration (`config.yml`)
 
-Project settings are managed centrally in the `config.yml` file located in the root directory. This file allows you to customize various parameters without modifying the scripts directly.
+Project settings are managed centrally in the `config.yml` file located in the root directory. This file allows you to customize various parameters without modifying the scripts directly, which improves maintainability by separating settings from code, making it easier for users to adapt the project to their needs or different environments without altering Python scripts.
 
 **Key settings include:**
-*   `mp_api_key`: **Your Materials Project API key. This is essential for fetching data using `fetch_mp_data.py`.**
-*   File paths: Locations for raw data, processed datasets, and saved models (e.g., `fetch_data.output_filename`, `process_data.output_filename`, `train_model.dataset_filename`, paths in `train_model.models` and `train_model.preprocessors`).
-*   Model parameters: Settings for training machine learning models, such as `train_model.test_size` and `train_model.n_estimators`.
-*   GUI settings: Window title and dimensions under the `gui` section.
+*   `mp_api_key`: **Your Materials Project API key. This is essential for fetching data using `fetch_mp_data.py`.** Ensuring the `mp_api_key` is correctly set in this file is the first and most crucial step for enabling the data fetching capabilities.
+*   `fetch_data`: Parameters for `fetch_mp_data.py`, such as `max_total_materials` to fetch, `output_filename` for the raw JSON data, and `criteria_sets` to define the search criteria on Materials Project (e.g., number of elements, specific elements like 'Fe').
+*   `process_data`: Settings for `process_raw_data.py`, including `raw_data_filename` (input) and `output_filename` for the processed CSV dataset.
+*   `train_model`: Configuration for `train_model.py`, such as the `dataset_filename` (input CSV), `test_size` for train-test split, `random_state` for reproducibility, `n_estimators` for Random Forest models, and paths for saving trained `models` and `preprocessors`.
+*   `gui`: Settings for `material_predictor_gui.py`, like the application `title`, window `geometry`, paths to `models_to_load`, and the `manual_entry_csv_filename` for saving manually entered data.
 
 **Important:** Before running `fetch_mp_data.py` for the first time, you **must** update the `mp_api_key` field in `config.yml` with your personal Materials Project API key. If this key is not found or is set to the placeholder `"YOUR_MP_API_KEY"` in `config.yml`, the system will then check for the `MP_API_KEY` environment variable as a fallback.
 
@@ -112,8 +115,9 @@ To run all tests, navigate to the root directory of the project in your terminal
 pytest
 ```
 This will discover and run all test files (e.g., `test_*.py`).
-*   **Unit tests** verify the functionality of individual modules (e.g., configuration loading, data processing logic).
-*   **Integration tests** check if different parts of the system work together correctly (e.g., the data processing pipeline from fetching to model training).
+*   **Unit tests** verify the functionality of individual modules (e.g., configuration loading from `utils/config_loader.py`, schema definitions in `utils/schema.py`). They also test the core logic within each script, such as data transformation rules in `process_raw_data.py`, correct parameter usage in `train_model.py` based on the configuration, and the data fetching workflow in `fetch_mp_data.py` (simulating various API responses using mocks).
+*   **Integration tests** check if different parts of the system work together correctly, specifically the main data pipeline (`fetch_data` -> `process_data` -> `train_models`) ensuring that these components correctly pass data (via files, as configured) from one stage to the next.
+*   **Note on GUI Testing**: GUI functionality related to model loading and predictions is tested at the code level (e.g., ensuring models are loaded as per config by the GUI script's logic), but automated GUI interaction tests (e.g., simulating button clicks) are not currently implemented due to environment-specific `tkinter` challenges encountered during development.
 
 ## Error Handling & Model Availability
 *   The GUI will show warnings if model files (`.joblib`, paths configured in `config.yml`) are not found during startup, and corresponding predictions will be disabled.
