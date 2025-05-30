@@ -20,6 +20,7 @@ This document tracks the project's progress against the initial roadmap for buil
 - `[~]` **Data Source: Your Own Calculations** (Annotation: Direct DFT calculations by the agent are not feasible. However, the "Manual Data Entry" tab in the GUI allows users to input data from their own calculations.)
 - `[~]` **Cleaning and Validation:** (Annotation: Basic NaN handling is done in the training script. No comprehensive data cleaning or validation methods are implemented yet.)
 - `[~]` **Data Volume:** (Annotation: The framework fetches ~50 materials for demonstration. Scripts can be adapted for more, and manual entry is possible. The current dataset is not "large volume" in the context of deep learning.)
+- `[x]` **Enhanced Data Fetching Control:** Implemented an option to fetch all available materials matching defined criteria by setting `max_total_materials` to `-5` in `config.yml`, bypassing default fetch limits.
 
 ## 3. Feature Engineering (Material Descriptors):
 
@@ -91,9 +92,9 @@ Here are some potential areas for future development and improvement:
     *   For larger datasets, consider moving away from CSVs to more robust storage solutions (e.g., SQLite database, Parquet files).
     *   If using very large datasets or complex models, explore tools for experiment tracking (e.g., MLflow, Weights & Biases).
 *   **Code & Project Structure:**
-    *   Introduce a configuration file (e.g., YAML or JSON) to manage settings like model paths, file paths, or default parameters, instead of having them hardcoded in scripts.
-    *   Develop a suite of unit and integration tests to ensure code reliability and catch regressions as the project evolves.
-    *   Further modularize the code, for example, by moving utility functions or data schema definitions into separate modules.
+    *   `[x]` **Introduce a configuration file (e.g., YAML or JSON) to manage settings like model paths, file paths, or default parameters, instead of having them hardcoded in scripts.** (Annotation: Implemented `config.yml` which centralizes all major settings: API keys, file paths for data/models, parameters for data fetching criteria, and model training (e.g., test_size, n_estimators). All scripts now load from this file via `utils.config_loader`.)
+    *   `[x]` **Develop a suite of unit and integration tests to ensure code reliability and catch regressions as the project evolves.** (Annotation: Implemented a comprehensive test suite in the `tests/` directory using `pytest`. Unit tests cover core logic in `fetch_mp_data` (mocking API calls), `process_raw_data` (mocking pymatgen and file I/O), `train_model` (mocking sklearn and file I/O), and utility modules. An integration test verifies the data pipeline from fetching through model training using the configuration system. GUI interaction tests are pending due to `tkinter` environment issues.)
+    *   `[x]` **Further modularize the code, for example, by moving utility functions or data schema definitions into separate modules.** (Annotation: Created a `utils/` directory containing `config_loader.py` for standardized configuration loading and `schema.py` for centralized data schema definitions (`DATA_SCHEMA`, `MANUAL_ENTRY_CSV_HEADERS`). Scripts have been updated to use these utilities, reducing redundancy.)
 *   **User Interface Enhancements:**
     *   Allow selection of different trained models if multiple versions or types are available.
     *   Provide more interactive feedback or visualizations within the GUI.

@@ -1,43 +1,45 @@
 import os
 import json
 import warnings
+from utils.config_loader import load_config
+from utils.schema import DATA_SCHEMA # Added
 from mp_api.client import MPRester
 from pymatgen.core import Composition, Structure # Ensure Structure is imported
 
-# DATA_SCHEMA definition remains the same
-DATA_SCHEMA = {
-    "material_id": "Materials Project ID (e.g., mp-123)",
-    "cif_string": "Crystallographic Information File as a string",
-    "band_gap_mp": "Band Gap (eV) directly from MP",
-    "formation_energy_per_atom_mp": "Formation Energy (eV/atom) directly from MP",
-    "dos_object_mp": "The CompleteDOS object from MP (temporary, for processing)",
-    "is_metal": "Boolean (True if band_gap_mp == 0, False otherwise)",
-    "dos_at_fermi": "Value of total DOS at Fermi level (eV⁻¹). 0 or N/A for insulators.",
-    "formula_pretty": "Reduced chemical formula (e.g., 'Si', 'GaAs')",
-    "num_elements": "Number of distinct elements in the material",
-    "elements": "Comma-separated string of elements (e.g., 'Ga,As')",
-    "density_pg": "Density (g/cm³) calculated by pymatgen",
-    "volume_pg": "Cell Volume (Å³) calculated by pymatgen",
-    "volume_per_atom_pg": "Volume per atom (Å³/atom) calculated by pymatgen",
-    "spacegroup_number_pg": "Space Group Number calculated by pymatgen",
-    "crystal_system_pg": "Crystal System (e.g., 'cubic', 'tetragonal') from pymatgen",
-    "lattice_a_pg": "Lattice parameter a (Å)",
-    "lattice_b_pg": "Lattice parameter b (Å)",
-    "lattice_c_pg": "Lattice parameter c (Å)",
-    "lattice_alpha_pg": "Lattice angle alpha (°)",
-    "lattice_beta_pg": "Lattice angle beta (°)",
-    "lattice_gamma_pg": "Lattice angle gamma (°)",
-    "num_sites_pg": "Number of atomic sites in the unit cell from pymatgen",
-    "target_band_gap": "Final Band Gap (eV) for ML",
-    "target_formation_energy": "Final Formation Energy (eV/atom) for ML",
-    "target_is_metal": "Final 'is_metal' boolean for ML",
-    "target_dos_at_fermi": "Final 'dos_at_fermi' for ML"
-}
+# DATA_SCHEMA is now imported from utils.schema
 
-def fetch_data(max_total_materials=50):
-    api_key = os.environ.get("MP_API_KEY")
-    if api_key is None:
-        warnings.warn("MP_API_KEY environment variable not set. Proceeding with anonymous access.")
+def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with loaded var
+    full_config = load_config() # Use the new centralized loader
+
+    if not full_config: # load_config now returns {} on failure/not found
+        warnings.warn("Failed to load or parse config.yml. Using default script parameters or environment variables.", UserWarning)
+        mp_api_key_from_config = None
+        fetch_config_params = {} # Use a different name to avoid confusion with outer scope 'fetch_config' if any
+    else:
+        mp_api_key_from_config = full_config.get("mp_api_key")
+        fetch_config_params = full_config.get("fetch_data", {})
+
+    # Get API key: Prioritize config, then environment variable
+    api_key = mp_api_key_from_config if mp_api_key_from_config and mp_api_key_from_config != "YOUR_MP_API_KEY" else os.environ.get("MP_API_KEY")
+
+    if not api_key:
+        warnings.warn("MP_API_KEY not found in config.yml or environment variables, or is set to the placeholder. Proceeding with anonymous access if possible.", UserWarning)
+        # Depending on mp_api strictness, this might still fail later.
+
+    # Get other parameters from config, with defaults from original script or function arg
+    # Retrieve max_total_materials from config, using function arg as ultimate fallback
+    max_total_materials_config = fetch_config_params.get('max_total_materials', max_total_materials_arg)
+    output_filename = fetch_config_params.get('output_filename', "mp_raw_data.json") # Default from original script
+
+    # Define criteria sets: Prioritize config, then script defaults
+    default_criteria_sets = [
+        {"target_n_elements": 2, "limit_per_set": 20, "description": "binary Fe compounds"},
+        {"target_n_elements": 3, "limit_per_set": 20, "description": "ternary Fe compounds"},
+        {"target_n_elements": 4, "limit_per_set": 10, "description": "quaternary Fe compounds"},
+        {"target_n_elements": 1, "limit_per_set": 5, "description": "elemental Fe"},
+    ]
+    criteria_sets = fetch_config_params.get('criteria_sets', default_criteria_sets)
+
 
     raw_materials_data = []
 
@@ -45,14 +47,6 @@ def fetch_data(max_total_materials=50):
     summary_fields = [
         "material_id", "formula_pretty", "nelements",
         "band_gap", "formation_energy_per_atom"
-    ]
-
-    # Define criteria sets for different numbers of elements for Python-side filtering
-    criteria_sets = [
-        {"target_n_elements": 2, "limit_per_set": 20, "description": "binary Fe compounds"},
-        {"target_n_elements": 3, "limit_per_set": 20, "description": "ternary Fe compounds"},
-        {"target_n_elements": 4, "limit_per_set": 10, "description": "quaternary Fe compounds"},
-        {"target_n_elements": 1, "limit_per_set": 5, "description": "elemental Fe"},
     ]
 
     # Cache for initial summary query results
@@ -81,9 +75,14 @@ def fetch_data(max_total_materials=50):
             return
 
         # Step 2: Iterate through criteria sets, filter candidates, and fetch details
+        fetchAll = False
+        if max_total_materials_config == -5:
+            fetchAll = True
+            print("Config 'max_total_materials' is -5. Fetching all matching materials, ignoring limits per set and overall total.")
+
         for criteria_set in criteria_sets:
-            if len(raw_materials_data) >= max_total_materials:
-                print(f"Reached overall target of {len(raw_materials_data)}/{max_total_materials} materials. Stopping.")
+            if not fetchAll and len(raw_materials_data) >= max_total_materials_config:
+                print(f"Reached overall target of {len(raw_materials_data)}/{max_total_materials_config} materials. Stopping.")
                 break
 
             target_n_elements = criteria_set["target_n_elements"]
@@ -94,8 +93,8 @@ def fetch_data(max_total_materials=50):
 
             materials_added_this_set = 0
             for summary_doc in summary_docs_cache:
-                if len(raw_materials_data) >= max_total_materials: break
-                if materials_added_this_set >= limit_per_set: break
+                if not fetchAll and len(raw_materials_data) >= max_total_materials_config: break
+                if not fetchAll and materials_added_this_set >= limit_per_set: break
 
                 # Python-side filtering for number of elements
                 num_doc_elements = summary_doc.nelements if hasattr(summary_doc, 'nelements') and summary_doc.nelements is not None \
@@ -136,16 +135,19 @@ def fetch_data(max_total_materials=50):
     print(f"\nTotal materials collected after all processing: {len(raw_materials_data)}")
 
     if raw_materials_data:
-        filename = "mp_raw_data.json"
-        print(f"Saving raw data to {filename}...")
+        # output_filename is now sourced from config or default at the start of the function
+        print(f"Saving raw data to {output_filename}...")
         try:
-            with open(filename, 'w') as f:
+            with open(output_filename, 'w') as f:
                 json.dump(raw_materials_data, f, indent=4)
-            print(f"Successfully saved data for {len(raw_materials_data)} materials to {filename}.")
+            print(f"Successfully saved data for {len(raw_materials_data)} materials to {output_filename}.")
         except Exception as e:
             print(f"Error saving data to JSON: {e}")
     else:
         print("No data collected to save.")
 
 if __name__ == "__main__":
-    fetch_data(max_total_materials=50)
+    # The fetch_data function now loads its own config, so no need to pass max_total_materials from here
+    # The fetch_data function now loads its own config.
+    # Pass the default max_total_materials if you want it to be the ultimate fallback.
+    fetch_data(max_total_materials_arg=50) # Original default was 50

@@ -3,6 +3,8 @@ import numpy as np
 import json
 import joblib
 import os
+import warnings # Added
+from utils.config_loader import load_config # Changed
 
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
@@ -19,8 +21,49 @@ from sklearn.impute import SimpleImputer
 def train_models():
     """
     Loads data, preprocesses it, and trains separate models for various material properties.
+    Uses settings from config.yml.
     """
-    csv_file = 'Fe_materials_dataset.csv'
+    full_config = load_config() # Use the new centralized loader
+    if not full_config: # load_config returns {} on error or not found
+        warnings.warn("Failed to load or parse config.yml for train_models. Using default script parameters.", UserWarning)
+        train_config_params = {}
+    else:
+        train_config_params = full_config.get('train_model', {})
+
+    csv_file = train_config_params.get('dataset_filename', 'Fe_materials_dataset.csv')
+    default_test_size = 0.2
+    default_random_state = 42
+    default_n_estimators = 10 # From original logic when config was introduced
+
+    test_size = train_config_params.get('test_size', default_test_size)
+    random_state = train_config_params.get('random_state', default_random_state)
+    n_estimators_config = train_config_params.get('n_estimators', default_n_estimators)
+
+
+    # Model and preprocessor filenames from config
+    default_model_filenames_map = { # Renamed for clarity
+        "dos_at_fermi": "model_dos_at_fermi.joblib",
+        "target_band_gap": "model_target_band_gap.joblib",
+        "target_formation_energy": "model_target_formation_energy.joblib",
+        "target_is_metal": "model_target_is_metal.joblib"
+    }
+    model_filenames_map = train_config_params.get('models', default_model_filenames_map)
+
+    default_preprocessor_filenames_map = { # Renamed for clarity
+        "main": "preprocessor_main.joblib",
+        "dos_at_fermi": "preprocessor_dos_at_fermi.joblib"
+    }
+    preprocessor_filenames_map = train_config_params.get('preprocessors', default_preprocessor_filenames_map)
+
+    # Specific filenames from loaded config or defaults
+    preprocessor_main_file = preprocessor_filenames_map.get("main", "preprocessor_main.joblib")
+
+    model_dos_file = model_filenames_map.get("dos_at_fermi", "model_dos_at_fermi.joblib")
+    model_band_gap_file = model_filenames_map.get("target_band_gap", "model_target_band_gap.joblib")
+    model_formation_energy_file = model_filenames_map.get("target_formation_energy", "model_target_formation_energy.joblib")
+    model_is_metal_file = model_filenames_map.get("target_is_metal", "model_target_is_metal.joblib")
+
+
     if not os.path.exists(csv_file):
         print(f"Error: Dataset file '{csv_file}' not found. Please generate it first.")
         return
@@ -90,35 +133,50 @@ def train_models():
         if X_dos.empty or y_dos.empty:
             print("Not enough data to train DOS at Fermi model after filtering.")
         else:
-            X_dos_train, X_dos_test, y_dos_train, y_dos_test = train_test_split(X_dos, y_dos, test_size=0.2, random_state=42)
+            X_dos_train, X_dos_test, y_dos_train, y_dos_test = train_test_split(X_dos, y_dos, test_size=test_size, random_state=random_state)
 
             # Fit a new preprocessor specifically for this dataset subset
+            # The config has a preprocessor_dos_at_fermi.joblib, implying the DOS preprocessor might be distinct
+            # and should be saved. The original script embedded it in the pipeline.
+            # For now, let's assume the pipeline handles the DOS preprocessor internally as before,
+            # but if 'preprocessor_dos_at_fermi.joblib' is meant to be a standalone file for the GUI,
+            # then this preprocessor_dos should be fitted and saved separately.
+            # The config structure suggests the DOS preprocessor IS saved separately.
+            preprocessor_dos_file = preprocessor_filenames_map.get("dos_at_fermi", "preprocessor_dos_at_fermi.joblib")
+
             preprocessor_dos = ColumnTransformer(
                 transformers=[
                     ('num', numerical_transformer, numerical_features_dos),
                     ('cat', categorical_transformer, categorical_features)
                 ], remainder='drop'
             )
+            # Fit and save the DOS preprocessor
+            print(f"Fitting DOS preprocessor for {X_dos_train.shape[0]} samples...")
+            fitted_preprocessor_dos = preprocessor_dos.fit(X_dos_train)
+            joblib.dump(fitted_preprocessor_dos, preprocessor_dos_file)
+            print(f"Saved DOS preprocessor to {preprocessor_dos_file}")
+
 
             pipeline_dos = Pipeline(steps=[
-                ('preprocessor', preprocessor_dos),
-                ('regressor', RandomForestRegressor(random_state=42, n_estimators=10)) # Use fewer estimators for small dataset
+                # The preprocessor is now fitted and saved, but pipeline still needs a preprocessor step.
+                # We pass the *fitted* preprocessor instance.
+                ('preprocessor', fitted_preprocessor_dos),
+                ('regressor', RandomForestRegressor(random_state=random_state, n_estimators=n_estimators_config))
             ])
 
             print(f"Training DOS model on {X_dos_train.shape[0]} samples...")
-            pipeline_dos.fit(X_dos_train, y_dos_train)
+            # Pipeline will use the already fitted preprocessor 'fitted_preprocessor_dos' for transform,
+            # and then fit the regressor.
+            pipeline_dos.fit(X_dos_train, y_dos_train) # Regressor is fit here. Preprocessor was already fit.
 
             # Evaluate
-            y_pred_dos = pipeline_dos.predict(X_dos_test)
+            y_pred_dos = pipeline_dos.predict(X_dos_test) # Uses transform from preprocessor, predict from regressor
             mae_dos = mean_absolute_error(y_dos_test, y_pred_dos)
             r2_dos = r2_score(y_dos_test, y_pred_dos)
             print(f"DOS Model (Metals Only) - MAE: {mae_dos:.4f}, R2: {r2_dos:.4f}")
 
-            joblib.dump(pipeline_dos, 'model_dos_at_fermi.joblib')
-            print("Saved DOS model to model_dos_at_fermi.joblib")
-            # The preprocessor is part of the pipeline_dos, so saving it separately is optional
-            # if you always use the pipeline. If needed:
-            # joblib.dump(pipeline_dos.named_steps['preprocessor'], 'preprocessor_dos_at_fermi.joblib')
+            joblib.dump(pipeline_dos, model_dos_file) # Save the whole pipeline
+            print(f"Saved DOS model pipeline to {model_dos_file}")
 
     else:
         print("No metallic samples with DOS data found to train the DOS model.")
@@ -148,24 +206,39 @@ def train_models():
     )
     print(f"Fitting main preprocessor on {X_main.shape[0]} samples for main models...")
     # We need a train split of X_main to fit this preprocessor properly before using it for multiple models
-    X_main_temp_train, _ = train_test_split(X_main, df_main[main_target_cols[0]], test_size=0.2, random_state=42) # Use any target for split
+    # If X_main is too small, train_test_split might behave unexpectedly or return fewer than 2 arrays.
+    # We only need X_main_temp_train for fitting the preprocessor.
+    if X_main.shape[0] > 1: # Ensure there's enough data to split
+        split_result = train_test_split(X_main, df_main[main_target_cols[0]], test_size=test_size, random_state=random_state)
+        X_main_temp_train = split_result[0]
+    else: # Not enough data to split, use X_main as is for fitting preprocessor
+        X_main_temp_train = X_main.copy() # Use a copy to be safe
+
     preprocessor_main_fitted = preprocessor_main.fit(X_main_temp_train)
-    joblib.dump(preprocessor_main_fitted, 'preprocessor_main.joblib')
-    print("Saved main preprocessor to preprocessor_main.joblib")
+    joblib.dump(preprocessor_main_fitted, preprocessor_main_file)
+    print(f"Saved main preprocessor to {preprocessor_main_file}")
 
     # --- Train Regressors (Band Gap, Formation Energy) ---
-    reg_targets_to_train = ['target_band_gap', 'target_formation_energy']
-    for target_name in reg_targets_to_train:
+    # These models will use the main_preprocessor_fitted and then their own regressor.
+    # The saved model will be just the regressor, not the full pipeline,
+    # as the GUI expects to load preprocessor and model separately for these.
+
+    reg_targets_map = {
+        "target_band_gap": model_band_gap_file,
+        "target_formation_energy": model_formation_energy_file
+    }
+
+    for target_name, model_file in reg_targets_map.items():
         print(f"\n--- Training Regressor for {target_name} ---")
         y_reg = df_main[target_name]
 
-        X_reg_train, X_reg_test, y_reg_train, y_reg_test = train_test_split(X_main, y_reg, test_size=0.2, random_state=42)
+        X_reg_train, X_reg_test, y_reg_train, y_reg_test = train_test_split(X_main, y_reg, test_size=test_size, random_state=random_state)
 
         # Transform data using the already fitted main preprocessor
         X_reg_train_processed = preprocessor_main_fitted.transform(X_reg_train)
         X_reg_test_processed = preprocessor_main_fitted.transform(X_reg_test)
 
-        regressor_model = RandomForestRegressor(random_state=42, n_estimators=10) # Use fewer estimators for small dataset
+        regressor_model = RandomForestRegressor(random_state=random_state, n_estimators=n_estimators_config)
 
         print(f"Training {target_name} model on {X_reg_train_processed.shape[0]} samples...")
         regressor_model.fit(X_reg_train_processed, y_reg_train)
@@ -175,21 +248,21 @@ def train_models():
         r2_reg = r2_score(y_reg_test, y_pred_reg)
         print(f"{target_name} Model - MAE: {mae_reg:.4f}, R2: {r2_reg:.4f}")
 
-        joblib.dump(regressor_model, f'model_{target_name}.joblib')
-        print(f"Saved {target_name} model to model_{target_name}.joblib")
+        joblib.dump(regressor_model, model_file)
+        print(f"Saved {target_name} model to {model_file}")
 
     # --- Train Classifier (is_metal) ---
+    # This model also uses main_preprocessor_fitted and then its own classifier.
     print(f"\n--- Training Classifier for {target_column_clf} ---")
     y_clf = df_main[target_column_clf].astype(int) # Ensure boolean is int
 
-    # We can reuse X_main from the regression part if features are identical
-    X_clf_train, X_clf_test, y_clf_train, y_clf_test = train_test_split(X_main, y_clf, test_size=0.2, random_state=42)
+    X_clf_train, X_clf_test, y_clf_train, y_clf_test = train_test_split(X_main, y_clf, test_size=test_size, random_state=random_state)
 
     # Transform data using the already fitted main preprocessor
     X_clf_train_processed = preprocessor_main_fitted.transform(X_clf_train)
     X_clf_test_processed = preprocessor_main_fitted.transform(X_clf_test)
 
-    classifier_model = RandomForestClassifier(random_state=42, n_estimators=10) # Use fewer estimators
+    classifier_model = RandomForestClassifier(random_state=random_state, n_estimators=n_estimators_config)
 
     print(f"Training {target_column_clf} model on {X_clf_train_processed.shape[0]} samples...")
     classifier_model.fit(X_clf_train_processed, y_clf_train)
@@ -199,8 +272,8 @@ def train_models():
     f1_clf = f1_score(y_clf_test, y_pred_clf, average='weighted')
     print(f"{target_column_clf} Model - Accuracy: {accuracy_clf:.4f}, F1 Score: {f1_clf:.4f}")
 
-    joblib.dump(classifier_model, f'model_{target_column_clf}.joblib')
-    print(f"Saved {target_column_clf} model to model_{target_column_clf}.joblib")
+    joblib.dump(classifier_model, model_is_metal_file)
+    print(f"Saved {target_column_clf} model to {model_is_metal_file}")
 
     print("\n--- Model Training Completed ---")
 

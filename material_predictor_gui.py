@@ -9,17 +9,11 @@ import joblib
 import pandas as pd
 import numpy as np
 import warnings
+# import yaml # No longer needed here, will use centralized loader
+from utils.config_loader import load_config
+from utils.schema import MANUAL_ENTRY_CSV_HEADERS # Added
 
-# CSV_HEADERS definition - keep one source of truth if possible, but for now,
-# classes will have their own copy if they directly use it.
-# This one is primarily for the ManualEntryTab to know how to save.
-MANUAL_ENTRY_CSV_HEADERS = [
-    "material_id", "band_gap_mp", "formation_energy_per_atom_mp", "is_metal", "dos_at_fermi",
-    "formula_pretty", "num_elements", "elements", "density_pg", "volume_pg", "volume_per_atom_pg",
-    "spacegroup_number_pg", "crystal_system_pg", "lattice_a_pg", "lattice_b_pg", "lattice_c_pg",
-    "lattice_alpha_pg", "lattice_beta_pg", "lattice_gamma_pg", "num_sites_pg",
-    "target_band_gap", "target_formation_energy", "target_is_metal", "target_dos_at_fermi"
-]
+# MANUAL_ENTRY_CSV_HEADERS is now imported from utils.schema
 
 class PredictionTab(ttk.Frame):
     def __init__(self, parent, loaded_models_dict, **kwargs):
@@ -205,6 +199,7 @@ class ManualEntryTab(ttk.Frame):
 
         self.manual_entry_fields = {}
         self.loaded_cif_path_manual_var = tk.StringVar(value="No CIF loaded.") # Used by a label
+        self.app_config = app_config # Store app_config if needed for save_manual_entry
 
         self._setup_widgets()
 
@@ -353,7 +348,10 @@ class ManualEntryTab(ttk.Frame):
         except ValueError as ve: messagebox.showerror("Validation Error", f"Invalid number: {ve}"); return
         except Exception as ex: messagebox.showerror("Error", f"Unexpected error: {ex}"); return
 
-        csv_filename = "Fe_materials_dataset.csv"
+        # Get filename from app's config (passed to ManualEntryTab or reloaded)
+        # Assuming self.app_config holds the 'gui' part of the main config
+        csv_filename = self.app_config.get('manual_entry_csv_filename', "Fe_materials_dataset.csv")
+
         file_exists = os.path.isfile(csv_filename)
         try:
             with open(csv_filename, 'a', newline='') as csvfile:
@@ -363,7 +361,7 @@ class ManualEntryTab(ttk.Frame):
                 writer.writerow(final_row)
             messagebox.showinfo("Success", f"Data for {material_id} saved to {csv_filename}")
             self.clear_manual_entry_fields()
-        except Exception e: messagebox.showerror("CSV Write Error", f"Could not save to CSV: {e}")
+        except Exception as e: messagebox.showerror("CSV Write Error", f"Could not save to CSV: {e}")
 
     def clear_manual_entry_fields(self):
         for key, widget in self.manual_entry_fields.items():
@@ -378,10 +376,17 @@ class ManualEntryTab(ttk.Frame):
 class Application(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Material Property Predictor Prototype")
-        self.geometry("900x700")
 
-        self.loaded_models_dict = self.load_all_models()
+        full_config = load_config() # Use the new centralized loader
+        self.gui_config = full_config.get('gui', {}) if full_config else {}
+
+        app_title = self.gui_config.get('title', "Material Property Predictor Prototype") # Default if gui_config is empty or key missing
+        app_geometry = self.gui_config.get('geometry', "900x700") # Default if gui_config is empty or key missing
+
+        self.title(app_title)
+        self.geometry(app_geometry)
+
+        self.loaded_models_dict = self.load_all_models_from_config() # Use specific config for models
 
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(expand=True, fill='both', padx=10, pady=10)
@@ -389,34 +394,37 @@ class Application(tk.Tk):
         self.prediction_tab_instance = PredictionTab(self.notebook, self.loaded_models_dict)
         self.notebook.add(self.prediction_tab_instance, text='Predict from CIF')
 
-        # Instantiate the new ManualEntryTab
-        self.manual_entry_tab_instance = ManualEntryTab(self.notebook)
+        # Instantiate the new ManualEntryTab, pass the gui_config to it
+        self.manual_entry_tab_instance = ManualEntryTab(self.notebook, app_config=self.gui_config)
         self.notebook.add(self.manual_entry_tab_instance, text='Manual Data Entry')
 
-        # self.manual_entry_fields = {} # This belongs to ManualEntryTab instance now
-        # self.setup_manual_entry_tab() # This is now called within ManualEntryTab's __init__
-        # self.selected_manual_cif_path = tk.StringVar() # This belongs to ManualEntryTab instance now
 
-    def load_all_models(self):
+    def load_all_models_from_config(self):
+        """Loads all models and preprocessors using filenames from the 'gui' section of config."""
         print("Loading models and preprocessors for Application...")
         loaded_models = {}
-        models_to_load_config = {
+
+        # Default model filenames if not found in config
+        default_models_to_load_paths = {
             "preprocessor_main": "preprocessor_main.joblib",
-            "preprocessor_dos": "preprocessor_dos_at_fermi.joblib", # Key used by PredictionTab
-            "model_is_metal": "model_target_is_metal.joblib",    # Key used by PredictionTab
-            "model_band_gap": "model_target_band_gap.joblib",    # Key used by PredictionTab
-            "model_formation_energy": "model_target_formation_energy.joblib", # Key used by PredictionTab
-            "model_dos_at_fermi": "model_dos_at_fermi.joblib"     # Key used by PredictionTab
+            "preprocessor_dos": "preprocessor_dos_at_fermi.joblib",
+            "model_is_metal": "model_target_is_metal.joblib",
+            "model_band_gap": "model_target_band_gap.joblib",
+            "model_formation_energy": "model_target_formation_energy.joblib",
+            "model_dos_at_fermi": "model_dos_at_fermi.joblib"
         }
-        for attr_name, filename in models_to_load_config.items():
+        # Get the dictionary mapping attribute name (e.g., "preprocessor_main") to filename
+        models_config_paths = self.gui_config.get('models_to_load', default_models_to_load_paths)
+
+        for attr_name, filename in models_config_paths.items():
             try:
                 loaded_models[attr_name] = joblib.load(filename)
-                print(f"Successfully loaded {filename} for Application")
+                print(f"Successfully loaded {filename} for Application as {attr_name}")
             except FileNotFoundError:
-                warnings.warn(f"App Warning: {filename} not found. Predictions relying on it will be unavailable.")
+                warnings.warn(f"App Warning: {filename} (for {attr_name}) not found. Predictions relying on it will be unavailable.")
                 loaded_models[attr_name] = None
             except Exception as e:
-                warnings.warn(f"App Warning: Error loading {filename}: {e}.")
+                warnings.warn(f"App Warning: Error loading {filename} (for {attr_name}): {e}.")
                 loaded_models[attr_name] = None
         return loaded_models
 
@@ -428,5 +436,7 @@ class Application(tk.Tk):
     # def clear_manual_entry_fields(self): ...
 
 if __name__ == '__main__':
+    # Ensure that when ManualEntryTab is instantiated, it receives the app_config
+    # Application class now handles passing its self.gui_config to ManualEntryTab.
     app = Application()
     app.mainloop()
