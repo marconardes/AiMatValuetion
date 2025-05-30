@@ -10,33 +10,36 @@ This project is a Tkinter GUI application designed as a prototype for predicting
 
 ## Core Components and Workflow
 
-1.  **Data Acquisition (Optional, for dataset generation):**
+The project is structured into several key components:
+*   **Data Acquisition Scripts (`fetch_mp_data.py`, `process_raw_data.py`):** For creating and preparing the dataset.
+*   **Model Training Script (`train_model.py`):** For training ML models from the dataset.
+*   **GUI Application (`material_predictor_gui.py`):** The main user interface.
+*   **Configuration File (`config.yml`):** For managing all important settings and parameters.
+*   **Utilities (`utils/`):** Contains shared modules for configuration loading (`config_loader.py`) and data schemas (`schema.py`).
+*   **Tests (`tests/`):** Includes unit and integration tests to ensure code reliability.
+
+The general workflow involves:
+
+1.  **Configuration (New!):**
+    *   Modify `config.yml` to set your Materials Project API key, define file paths, and adjust model parameters. (More details in the "Configuration" section below).
+
+2.  **Data Acquisition (Optional, for dataset generation):**
     *   Primarily designed for creating a dataset of Fe-based compounds using the Materials Project API.
     *   **`fetch_mp_data.py`**: This script queries the Materials Project API.
-        *   **Requirement**: You **must** set an environment variable named `MP_API_KEY` with your valid Materials Project API key. You can obtain a key by registering at [materialsproject.org](https://materialsproject.org).
-        *   It fetches raw data for materials containing Iron (Fe) and saves it to `mp_raw_data.json`.
-    *   **`process_raw_data.py`**: This script processes `mp_raw_data.json`.
+        *   **Requirement**: You **must** provide your Materials Project API key. The primary method is to set the `mp_api_key` in the `config.yml` file. If not found there, the script will check for an environment variable named `MP_API_KEY`. You can obtain a key by registering at [materialsproject.org](https://materialsproject.org).
+        *   It fetches raw data for materials (defaulting to Iron-based if not otherwise configured) and saves it to a JSON file (default: `mp_raw_data.json`, configurable in `config.yml`).
+    *   **`process_raw_data.py`**: This script processes the raw JSON data file.
         *   It uses `pymatgen` to parse CIF strings and extract structural features.
         *   It combines these with API-sourced data and saves the result to `Fe_materials_dataset.csv`.
-    *   **Placeholder Dataset**: A placeholder `Fe_materials_dataset.csv` is included in the repository. This allows the GUI and model training script to run for demonstration purposes even if you don't immediately fetch fresh data from the API.
+    *   **Placeholder Dataset**: A placeholder `Fe_materials_dataset.csv` is included in the repository. This allows the GUI and model training script to run for demonstration purposes even if you don't immediately fetch or process fresh data. The filenames for input and output are configurable via `config.yml`.
 
-2.  **Model Training (`train_model.py`):**
-    *   This script loads the `Fe_materials_dataset.csv`.
-    *   It trains several machine learning models to predict material properties:
-        *   Band Gap (Regressor)
-        *   Formation Energy per Atom (Regressor)
-        *   Metallicity (Is Metal - Classifier)
-        *   Density of States (DOS) at Fermi Level (Regressor, for metals only)
-    *   The script performs basic preprocessing (imputation, scaling, one-hot encoding) and saves the trained models and preprocessors as `.joblib` files:
-        *   `model_target_band_gap.joblib`
-        *   `model_target_formation_energy.joblib`
-        *   `model_target_is_metal.joblib`
-        *   `model_dos_at_fermi.joblib`
-        *   `preprocessor_main.joblib` (for general features)
-        *   `preprocessor_dos_at_fermi.joblib` (specifically for DOS model features)
+3.  **Model Training (`train_model.py`):**
+    *   This script loads the processed dataset (default: `Fe_materials_dataset.csv`, configurable).
+    *   It trains several machine learning models as defined in the script.
+    *   Model parameters (e.g., test size, estimators) and output filenames for models and preprocessors are managed via `config.yml`.
     *   **Usage**: `python train_model.py`
 
-3.  **GUI Application (`material_predictor_gui.py`):**
+4.  **GUI Application (`material_predictor_gui.py`):**
     *   A Tkinter-based graphical user interface with two main tabs.
     *   **"Predict from CIF" Tab:**
         *   Allows users to select a local CIF file.
@@ -69,32 +72,52 @@ This project is a Tkinter GUI application designed as a prototype for predicting
     ```bash
     pip install -r requirements.txt
     ```
-    This includes `pymatgen`, `scikit-learn`, `pandas`, `numpy`, `mp-api`, and `joblib`.
+    This includes `pymatgen`, `scikit-learn`, `pandas`, `numpy`, `mp-api`, `joblib`, and `PyYAML`.
 
-4.  **Running the Application & Workflow:**
-    *   **Option A: Use placeholder data and pre-trained models (if provided)**
-        1.  The repository may include placeholder `Fe_materials_dataset.csv` and pre-trained `.joblib` files.
+4.  **Configure `config.yml` (Crucial First Step):**
+    *   Open `config.yml` in a text editor.
+    *   **Set your `mp_api_key`**. This is essential for `fetch_mp_data.py`.
+    *   Review other settings like file paths and model parameters, and adjust if necessary.
+
+5.  **Running the Application & Workflow:**
+    *   **Option A: Use placeholder data and pre-trained models (if provided in repo and configured in `config.yml`)**
+        1.  Ensure `config.yml` points to existing dataset and model files if you are not training them locally.
         2.  Run the GUI: `python material_predictor_gui.py`
         3.  Use the "Predict from CIF" tab with your own CIF files, or explore the "Manual Data Entry" tab.
     *   **Option B: Generate dataset and train models locally**
-        1.  **Set API Key (Crucial for `fetch_mp_data.py`):**
-            Set the `MP_API_KEY` environment variable:
-            ```bash
-            # Linux/macOS
-            export MP_API_KEY="YOUR_ACTUAL_API_KEY"
-            # Windows Command Prompt
-            set MP_API_KEY="YOUR_ACTUAL_API_KEY"
-            # Windows PowerShell
-            $Env:MP_API_KEY="YOUR_ACTUAL_API_KEY"
-            ```
-        2.  Run data fetching: `python fetch_mp_data.py`
-        3.  Process raw data: `python process_raw_data.py` (This creates/updates `Fe_materials_dataset.csv`)
-        4.  Train models: `python train_model.py` (This creates the `.joblib` model files)
-        5.  Run the GUI: `python material_predictor_gui.py`
+        1.  **Ensure API Key is set in `config.yml`**. (Fallback to `MP_API_KEY` environment variable is also possible if `mp_api_key` in `config.yml` is placeholder or missing).
+        2.  Run data fetching: `python fetch_mp_data.py` (uses settings from `config.yml`)
+        3.  Process raw data: `python process_raw_data.py` (uses settings from `config.yml`)
+        4.  Train models: `python train_model.py` (uses settings from `config.yml`)
+        5.  Run the GUI: `python material_predictor_gui.py` (loads models and datasets as per `config.yml`)
+
+## Configuration (`config.yml`)
+
+Project settings are managed centrally in the `config.yml` file located in the root directory. This file allows you to customize various parameters without modifying the scripts directly.
+
+**Key settings include:**
+*   `mp_api_key`: **Your Materials Project API key. This is essential for fetching data using `fetch_mp_data.py`.**
+*   File paths: Locations for raw data, processed datasets, and saved models (e.g., `fetch_data.output_filename`, `process_data.output_filename`, `train_model.dataset_filename`, paths in `train_model.models` and `train_model.preprocessors`).
+*   Model parameters: Settings for training machine learning models, such as `train_model.test_size` and `train_model.n_estimators`.
+*   GUI settings: Window title and dimensions under the `gui` section.
+
+**Important:** Before running `fetch_mp_data.py` for the first time, you **must** update the `mp_api_key` field in `config.yml` with your personal Materials Project API key. If this key is not found or is set to the placeholder `"YOUR_MP_API_KEY"` in `config.yml`, the system will then check for the `MP_API_KEY` environment variable as a fallback.
+
+## Running Tests
+
+The project includes a suite of unit and integration tests located in the `tests/` directory. These tests are built using the `pytest` framework.
+
+To run all tests, navigate to the root directory of the project in your terminal and execute:
+```bash
+pytest
+```
+This will discover and run all test files (e.g., `test_*.py`).
+*   **Unit tests** verify the functionality of individual modules (e.g., configuration loading, data processing logic).
+*   **Integration tests** check if different parts of the system work together correctly (e.g., the data processing pipeline from fetching to model training).
 
 ## Error Handling & Model Availability
-*   The GUI will show warnings if model files (`.joblib`) are not found during startup, and corresponding predictions will be disabled.
-*   The data fetching script (`fetch_mp_data.py`) will warn if the `MP_API_KEY` is not set and may fail or retrieve limited data.
+*   The GUI will show warnings if model files (`.joblib`, paths configured in `config.yml`) are not found during startup, and corresponding predictions will be disabled.
+*   The data fetching script (`fetch_mp_data.py`) will warn if the API key is not properly configured (see Configuration section) and may fail or retrieve limited data.
 *   Basic error messages are shown for CIF parsing issues or missing dataset files.
 
 [end of README.md]

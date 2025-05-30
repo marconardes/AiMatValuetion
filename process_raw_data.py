@@ -2,53 +2,29 @@ import json
 import csv
 import warnings
 import os # For checking file existence
+from utils.config_loader import load_config
+from utils.schema import DATA_SCHEMA # Added
 
 from pymatgen.core.structure import Structure
 from pymatgen.electronic_structure.dos import Dos # To reconstruct DOS objects
 
-# Re-define or import DATA_SCHEMA (ensure it's identical to the one in fetch_mp_data.py)
-# For simplicity in this step, we'll redefine it here.
-# In a larger project, this might be in a shared 'config.py' or 'schema.py'.
-DATA_SCHEMA = {
-    "material_id": "Materials Project ID (e.g., mp-123)",
-    "cif_string": "Crystallographic Information File as a string", # Will not be in final CSV
-    # Features from Materials Project API
-    "band_gap_mp": "Band Gap (eV) directly from MP",
-    "formation_energy_per_atom_mp": "Formation Energy (eV/atom) directly from MP",
-    "dos_object_mp": "The CompleteDOS object from MP (temporary, for processing)", # Will not be in final CSV
-    # Processed DOS Features
-    "is_metal": "Boolean (True if band_gap_mp == 0, False otherwise)",
-    "dos_at_fermi": "Value of total DOS at Fermi level (eV⁻¹). 0 or N/A for insulators.",
-    # Features to be extracted by Pymatgen from CIF string
-    "formula_pretty": "Reduced chemical formula (e.g., 'Si', 'GaAs')",
-    "num_elements": "Number of distinct elements in the material",
-    "elements": "Comma-separated string of elements (e.g., 'Ga,As')",
-    "density_pg": "Density (g/cm³) calculated by pymatgen",
-    "volume_pg": "Cell Volume (Å³) calculated by pymatgen",
-    "volume_per_atom_pg": "Volume per atom (Å³/atom) calculated by pymatgen",
-    "spacegroup_number_pg": "Space Group Number calculated by pymatgen",
-    "crystal_system_pg": "Crystal System (e.g., 'cubic', 'tetragonal') from pymatgen",
-    "lattice_a_pg": "Lattice parameter a (Å)",
-    "lattice_b_pg": "Lattice parameter b (Å)",
-    "lattice_c_pg": "Lattice parameter c (Å)",
-    "lattice_alpha_pg": "Lattice angle alpha (°)",
-    "lattice_beta_pg": "Lattice angle beta (°)",
-    "lattice_gamma_pg": "Lattice angle gamma (°)",
-    "num_sites_pg": "Number of atomic sites in the unit cell from pymatgen",
-    # Target properties
-    "target_band_gap": "Final Band Gap (eV) for ML",
-    "target_formation_energy": "Final Formation Energy (eV/atom) for ML",
-    "target_is_metal": "Final 'is_metal' boolean for ML",
-    "target_dos_at_fermi": "Final 'dos_at_fermi' for ML"
-}
-
+# DATA_SCHEMA is now imported from utils.schema
 
 def process_data():
     """
-    Loads raw data from mp_raw_data.json, processes it,
-    and saves it to Fe_materials_dataset.csv.
+    Loads raw data (filename from config), processes it,
+    and saves it to a CSV file (filename from config).
     """
-    raw_data_filename = "mp_raw_data.json"
+    full_config = load_config() # Use the new centralized loader
+    if not full_config: # load_config returns {} on error or not found
+        warnings.warn("Failed to load or parse config.yml for process_data. Using default script parameters.", UserWarning)
+        process_config_params = {}
+    else:
+        process_config_params = full_config.get('process_data', {})
+
+    raw_data_filename = process_config_params.get('raw_data_filename', "mp_raw_data.json")
+    csv_filename_out = process_config_params.get('output_filename', "Fe_materials_dataset.csv")
+
     if not os.path.exists(raw_data_filename):
         print(f"Error: Raw data file '{raw_data_filename}' not found. Please run fetch_mp_data.py first.")
         return
@@ -149,15 +125,15 @@ def process_data():
     # However, it's better to strictly adhere to DATA_SCHEMA for CSV columns.
     # For this implementation, we assume processed_doc keys will be a subset of DATA_SCHEMA keys intended for CSV.
 
-    csv_filename = "Fe_materials_dataset.csv"
-    print(f"\nWriting processed data to {csv_filename}...")
+    # csv_filename_out is sourced from config or default at the start of the function
+    print(f"\nWriting processed data to {csv_filename_out}...")
     try:
-        with open(csv_filename, 'w', newline='') as csvfile:
+        with open(csv_filename_out, 'w', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=csv_fieldnames, extrasaction='ignore') # extrasaction='ignore' is safer
             writer.writeheader()
             for row_data in processed_materials_data:
                 writer.writerow(row_data)
-        print(f"Successfully processed and saved data for {len(processed_materials_data)} materials to {csv_filename}.")
+        print(f"Successfully processed and saved data for {len(processed_materials_data)} materials to {csv_filename_out}.")
     except Exception as e:
         print(f"Error writing to CSV: {e}")
 
