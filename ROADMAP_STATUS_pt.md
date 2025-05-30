@@ -66,3 +66,34 @@ Este documento acompanha o progresso do projeto em relação ao roteiro inicial 
 ## Adiciona uma interface gráfica para a criação de novos materiais.
 
 - `[x]` **(Referindo-se à GUI para inserir candidatos de materiais para predição e entrada manual de dados)** (Anotação: A GUI Tkinter inclui uma aba "Prever a partir de CIF" e uma aba "Entrada Manual de Dados", cumprindo este requisito.)
+
+---
+## Melhorias no Projeto
+
+- `[x]` **Refatoração do Código da GUI:** O arquivo `material_predictor_gui.py` foi significativamente refatorado. Funcionalidades específicas das abas ('Prever a partir de CIF', 'Entrada Manual de Dados') foram movidas para suas próprias classes (`PredictionTab`, `ManualEntryTab`) para modularidade, legibilidade e manutenibilidade aprimoradas.
+
+---
+## Considerações Futuras & Próximos Passos Potenciais (Dicas)
+
+Aqui estão algumas áreas potenciais para desenvolvimento e melhoria futuros:
+
+*   **Treinamento Avançado de Modelos:**
+    *   Implementar o ajuste de hiperparâmetros (ex.: usando `GridSearchCV` ou `RandomizedSearchCV` do `scikit-learn`) para os modelos Random Forest existentes para potencialmente melhorar seu desempenho.
+    *   Incorporar validação cruzada durante o processo de treinamento do modelo (`train_model.py`) para métricas de avaliação mais robustas.
+*   **Explorar Modelos Avançados:**
+    *   Se conjuntos de dados maiores e mais diversificados se tornarem disponíveis, explorar arquiteturas de modelo mais avançadas, como:
+        *   Redes Neurais Feedforward (FNNs) para dados de características tabulares.
+        *   Redes Neurais de Grafos (GNNs), como CGCNN, que podem aprender diretamente de estruturas cristalinas (exigiriam mudanças significativas na engenharia de características e representação de dados).
+*   **Avaliação e Análise Mais Profundas:**
+    *   Desenvolver ferramentas ou saídas de análise de erro mais detalhadas. Por exemplo, identificar tipos de materiais ou faixas de características onde os modelos têm desempenho inferior.
+    *   Implementar funcionalidade para plotar distribuições de características, distribuições de variáveis alvo ou correlações de previsão (ex.: gráficos de previsto vs. real). Isso pode envolver a integração de bibliotecas como Matplotlib/Seaborn, potencialmente como um script separado ou nova aba na GUI.
+*   **Gerenciamento de Dados & Escalabilidade:**
+    *   Para conjuntos de dados maiores, considerar a transição de CSVs para soluções de armazenamento mais robustas (ex.: banco de dados SQLite, arquivos Parquet).
+    *   Se estiver usando conjuntos de dados muito grandes ou modelos complexos, explorar ferramentas para rastreamento de experimentos (ex.: MLflow, Weights & Biases).
+*   **Estrutura do Código & Projeto:**
+    *   Introduzir um arquivo de configuração (ex.: YAML ou JSON) para gerenciar configurações como caminhos de modelo, caminhos de arquivo ou parâmetros padrão, em vez de tê-los codificados diretamente nos scripts.
+    *   Desenvolver um conjunto de testes unitários e de integração para garantir a confiabilidade do código e detectar regressões à medida que o projeto evolui.
+    *   Modularizar ainda mais o código, por exemplo, movendo funções utilitárias ou definições de esquema de dados para módulos separados.
+*   **Melhorias na Interface do Usuário:**
+    *   Permitir a seleção de diferentes modelos treinados, se várias versões ou tipos estiverem disponíveis.
+    *   Fornecer feedback mais interativo ou visualizações dentro da GUI.

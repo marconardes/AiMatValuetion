@@ -66,3 +66,34 @@ This document tracks the project's progress against the initial roadmap for buil
 ## Adds a graphical interface for the creation of new materials.
 
 - `[x]` **(Referring to GUI for inputting material candidates for prediction & manual data entry)** (Annotation: The Tkinter GUI includes a "Predict from CIF" tab and a "Manual Data Entry" tab, fulfilling this.)
+
+---
+## Project Enhancements
+
+- `[x]` **GUI Code Refactoring:** The `material_predictor_gui.py` file was significantly refactored. Tab-specific functionalities ('Predict from CIF', 'Manual Data Entry') were moved into their own classes (`PredictionTab`, `ManualEntryTab`) for improved modularity, readability, and maintainability.
+
+---
+## Future Considerations & Potential Next Steps (Dicas)
+
+Here are some potential areas for future development and improvement:
+
+*   **Advanced Model Training:**
+    *   Implement hyperparameter tuning (e.g., using `GridSearchCV` or `RandomizedSearchCV` from `scikit-learn`) for the existing Random Forest models to potentially improve their performance.
+    *   Incorporate cross-validation during the model training process (`train_model.py`) for more robust evaluation metrics.
+*   **Explore Advanced Models:**
+    *   If larger and more diverse datasets become available, explore more advanced model architectures such as:
+        *   Feedforward Neural Networks (FNNs) for tabular feature data.
+        *   Graph Neural Networks (GNNs), like CGCNN, which can learn directly from crystal structures (would require significant changes to feature engineering and data representation).
+*   **Deeper Evaluation & Analysis:**
+    *   Develop more detailed error analysis tools or outputs. For instance, identify types of materials or feature ranges where models perform poorly.
+    *   Implement functionality to plot feature distributions, target variable distributions, or prediction correlations (e.g., predicted vs. actual plots). This might involve integrating libraries like Matplotlib/Seaborn, potentially as a separate script or new GUI tab.
+*   **Data Management & Scalability:**
+    *   For larger datasets, consider moving away from CSVs to more robust storage solutions (e.g., SQLite database, Parquet files).
+    *   If using very large datasets or complex models, explore tools for experiment tracking (e.g., MLflow, Weights & Biases).
+*   **Code & Project Structure:**
+    *   Introduce a configuration file (e.g., YAML or JSON) to manage settings like model paths, file paths, or default parameters, instead of having them hardcoded in scripts.
+    *   Develop a suite of unit and integration tests to ensure code reliability and catch regressions as the project evolves.
+    *   Further modularize the code, for example, by moving utility functions or data schema definitions into separate modules.
+*   **User Interface Enhancements:**
+    *   Allow selection of different trained models if multiple versions or types are available.
+    *   Provide more interactive feedback or visualizations within the GUI.
