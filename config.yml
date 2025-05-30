@@ -3,7 +3,7 @@ mp_api_key: "YOUR_MP_API_KEY"  # User should replace this
 
 # fetch_mp_data.py settings
 fetch_data:
-  max_total_materials: 50
+  max_total_materials: 50 # Set to -5 to fetch all matching materials, ignoring criteria_set limits and this overall maximum.
   output_filename: "mp_raw_data.json"
   criteria_sets:
     - target_n_elements: 2

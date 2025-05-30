@@ -99,7 +99,7 @@ Project settings are managed centrally in the `config.yml` file located in the r
 
 **Key settings include:**
 *   `mp_api_key`: **Your Materials Project API key. This is essential for fetching data using `fetch_mp_data.py`.** Ensuring the `mp_api_key` is correctly set in this file is the first and most crucial step for enabling the data fetching capabilities.
-*   `fetch_data`: Parameters for `fetch_mp_data.py`, such as `max_total_materials` to fetch, `output_filename` for the raw JSON data, and `criteria_sets` to define the search criteria on Materials Project (e.g., number of elements, specific elements like 'Fe').
+*   `fetch_data`: Parameters for `fetch_mp_data.py`, such as `max_total_materials` to fetch, `output_filename` for the raw JSON data, and `criteria_sets` to define the search criteria on Materials Project (e.g., number of elements, specific elements like 'Fe'). A special value of `-5` for `max_total_materials` will instruct the script to attempt to fetch all materials matching the combined criteria from the initial API query, ignoring individual `limit_per_set` and the overall `max_total_materials` cap.
 *   `process_data`: Settings for `process_raw_data.py`, including `raw_data_filename` (input) and `output_filename` for the processed CSV dataset.
 *   `train_model`: Configuration for `train_model.py`, such as the `dataset_filename` (input CSV), `test_size` for train-test split, `random_state` for reproducibility, `n_estimators` for Random Forest models, and paths for saving trained `models` and `preprocessors`.
 *   `gui`: Settings for `material_predictor_gui.py`, like the application `title`, window `geometry`, paths to `models_to_load`, and the `manual_entry_csv_filename` for saving manually entered data.

@@ -20,6 +20,7 @@ This document tracks the project's progress against the initial roadmap for buil
 - `[~]` **Data Source: Your Own Calculations** (Annotation: Direct DFT calculations by the agent are not feasible. However, the "Manual Data Entry" tab in the GUI allows users to input data from their own calculations.)
 - `[~]` **Cleaning and Validation:** (Annotation: Basic NaN handling is done in the training script. No comprehensive data cleaning or validation methods are implemented yet.)
 - `[~]` **Data Volume:** (Annotation: The framework fetches ~50 materials for demonstration. Scripts can be adapted for more, and manual entry is possible. The current dataset is not "large volume" in the context of deep learning.)
+- `[x]` **Enhanced Data Fetching Control:** Implemented an option to fetch all available materials matching defined criteria by setting `max_total_materials` to `-5` in `config.yml`, bypassing default fetch limits.
 
 ## 3. Feature Engineering (Material Descriptors):
 

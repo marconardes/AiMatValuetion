@@ -20,6 +20,7 @@ Este documento acompanha o progresso do projeto em relação ao roadmap inicial 
 - `[~]` **Fonte de Dados: Seus Próprios Cálculos** (Anotação: Cálculos DFT diretos pelo agente não são viáveis. No entanto, a aba "Entrada Manual de Dados" na GUI permite aos usuários inserir dados de seus próprios cálculos.)
 - `[~]` **Limpeza e Validação:** (Anotação: O tratamento básico de NaN é feito no script de treinamento. Nenhum método abrangente de limpeza ou validação de dados foi implementado ainda.)
 - `[~]` **Volume de Dados:** (Anotação: O framework busca ~50 materiais para demonstração. Os scripts podem ser adaptados para mais, e a entrada manual é possível. O conjunto de dados atual não é de "grande volume" no contexto de aprendizado profundo.)
+- `[x]` **Controle Aprimorado de Busca de Dados:** Implementada uma opção para buscar todos os materiais disponíveis que correspondam aos critérios definidos, configurando `max_total_materials` para `-5` no `config.yml`, contornando os limites de busca padrão.
 
 ## 3. Engenharia de Atributos (Descritores de Materiais):
 

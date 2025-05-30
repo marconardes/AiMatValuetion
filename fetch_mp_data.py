@@ -27,7 +27,8 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
         # Depending on mp_api strictness, this might still fail later.
 
     # Get other parameters from config, with defaults from original script or function arg
-    max_total_materials = fetch_config_params.get('max_total_materials', max_total_materials_arg)
+    # Retrieve max_total_materials from config, using function arg as ultimate fallback
+    max_total_materials_config = fetch_config_params.get('max_total_materials', max_total_materials_arg)
     output_filename = fetch_config_params.get('output_filename', "mp_raw_data.json") # Default from original script
 
     # Define criteria sets: Prioritize config, then script defaults
@@ -74,9 +75,14 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
             return
 
         # Step 2: Iterate through criteria sets, filter candidates, and fetch details
+        fetchAll = False
+        if max_total_materials_config == -5:
+            fetchAll = True
+            print("Config 'max_total_materials' is -5. Fetching all matching materials, ignoring limits per set and overall total.")
+
         for criteria_set in criteria_sets:
-            if len(raw_materials_data) >= max_total_materials:
-                print(f"Reached overall target of {len(raw_materials_data)}/{max_total_materials} materials. Stopping.")
+            if not fetchAll and len(raw_materials_data) >= max_total_materials_config:
+                print(f"Reached overall target of {len(raw_materials_data)}/{max_total_materials_config} materials. Stopping.")
                 break
 
             target_n_elements = criteria_set["target_n_elements"]
@@ -87,8 +93,8 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
 
             materials_added_this_set = 0
             for summary_doc in summary_docs_cache:
-                if len(raw_materials_data) >= max_total_materials: break
-                if materials_added_this_set >= limit_per_set: break
+                if not fetchAll and len(raw_materials_data) >= max_total_materials_config: break
+                if not fetchAll and materials_added_this_set >= limit_per_set: break
 
                 # Python-side filtering for number of elements
                 num_doc_elements = summary_doc.nelements if hasattr(summary_doc, 'nelements') and summary_doc.nelements is not None \
