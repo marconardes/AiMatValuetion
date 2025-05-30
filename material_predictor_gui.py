@@ -192,14 +192,16 @@ class PredictionTab(ttk.Frame):
 
 class ManualEntryTab(ttk.Frame):
     def __init__(self, parent, **kwargs):
-        super().__init__(parent, **kwargs)
-        # self.parent_notebook = parent
+        # Extract app_config from kwargs. If it's not there, default to an empty dict.
+        self.app_config = kwargs.pop('app_config', {})
+        super().__init__(parent, **kwargs) # Call super with cleaned kwargs
+        # self.parent_notebook = parent # parent is already passed to super, ttk.Frame handles it.
 
         self.CSV_HEADERS = MANUAL_ENTRY_CSV_HEADERS # Use the global one for consistency
 
         self.manual_entry_fields = {}
         self.loaded_cif_path_manual_var = tk.StringVar(value="No CIF loaded.") # Used by a label
-        self.app_config = app_config # Store app_config if needed for save_manual_entry
+        # self.app_config is now set from kwargs
 
         self._setup_widgets()
 
