@@ -1,102 +1,110 @@
-# Roadmap de Desenvolvimento do Modelo de IA: Status Atual
+# Roadmap para Descoberta de Supercondutores com IA: Um Plano de 20 Passos
 
-Este documento acompanha o progresso do projeto em relação ao roadmap inicial para construir um modelo de IA para prever propriedades de materiais.
+Este plano transforma as fases estratégicas em um fluxo de trabalho acionável, com prioridades claras do setup inicial até a validação experimental.
 
-- `[x]` Implementado
-- `[~]` Parcialmente Implementado ou Versão Básica Existente
-- `[ ]` Não Implementado
+## Fase I: 🏗️ Construção da Fundação de Dados (Prioridades 1-6)
 
----
+O sucesso do projeto depende inteiramente da qualidade e da organização dos seus dados.
 
-## 1. Definir o Problema e Escopo:
+- `[ ]` **(Prioridade 1/20) Setup do Ambiente de Desenvolvimento:**
+    - `[ ]` Configurar um repositório de código (Git).
+    - `[ ]` Instalar bibliotecas essenciais de IA (PyTorch, TensorFlow).
+    - `[ ]` Instalar bibliotecas de IA para grafos (PyTorch Geometric ou DGL).
+    - `[ ]` Instalar bibliotecas de química/materiais (Pymatgen, RDKit).
 
-- `[x]` **Qual propriedade eletrônica específica você quer prever?** (Implementado: Gap de energia, características da densidade de estados, energia de formação. Estabilidade não diretamente, embora a energia de formação esteja relacionada.)
-- `[~]` **Para qual classe de materiais?** (Anotação: Conjunto de dados inicial focado em compostos baseados em Fe do Materials Project. A ferramenta GUI em si é genérica para qualquer CIF.)
-- `[ ]` **Qual é o nível de precisão desejado e o custo computacional aceitável?** (Anotação: A precisão é avaliada, mas nenhum alvo específico como "80%" foi definido ou otimizado.)
+- `[ ]` **(Prioridade 2/20) Identificação e Acesso às Fontes de Dados:**
+    - `[ ]` Obter chaves de API e permissões para acessar bancos de dados como Materials Project, ICSD e SuperCon.
+    - `[ ]` Definir os critérios de busca para materiais relevantes.
 
-## 2. Aquisição e Preparação de Dados:
+- `[ ]` **(Prioridade 3/20) Desenvolvimento de Scripts para Extração de Dados:**
+    - `[ ]` Escrever e executar scripts para baixar sistematicamente os dados estruturais e de propriedades dos materiais selecionados.
+    - `[ ]` Armazenar os dados brutos em um formato organizado (ex: banco de dados local ou data lake).
 
-- `[x]` **Fonte de Dados: Bancos de Dados Públicos** (Anotação: Implementada a busca na API do Materials Project via `fetch_mp_data.py`. AFLOW foi discutido, mas não implementado como fonte direta.)
-- `[~]` **Fonte de Dados: Seus Próprios Cálculos** (Anotação: Cálculos DFT diretos pelo agente não são viáveis. No entanto, a aba "Entrada Manual de Dados" na GUI permite aos usuários inserir dados de seus próprios cálculos.)
-- `[~]` **Limpeza e Validação:** (Anotação: O tratamento básico de NaN é feito no script de treinamento. Nenhum método abrangente de limpeza ou validação de dados foi implementado ainda.)
-- `[~]` **Volume de Dados:** (Anotação: O framework busca ~50 materiais para demonstração. Os scripts podem ser adaptados para mais, e a entrada manual é possível. O conjunto de dados atual não é de "grande volume" no contexto de aprendizado profundo.)
-- `[x]` **Controle Aprimorado de Busca de Dados:** Implementada uma opção para buscar todos os materiais disponíveis que correspondam aos critérios definidos, configurando `max_total_materials` para `-5` no `config.yml`, contornando os limites de busca padrão.
+- `[ ]` **(Prioridade 4/20) Limpeza e Normalização dos Dados:**
+    - `[ ]` Validar os dados extraídos, tratando valores faltantes e inconsistências.
+    - `[ ]` Unificar unidades e formatos. Por exemplo, garantir que todas as estruturas cristalinas estejam em um formato padrão como arquivos CIF.
 
-## 3. Engenharia de Atributos (Descritores de Materiais):
+- `[ ]` **(Prioridade 5/20) Definição e Implementação da Representação em Grafo:**
+    - `[ ]` Definir formalmente como uma estrutura cristalina será convertida em um grafo.
+        - `[ ]` Nós: Átomos (com features como número atômico, eletronegatividade).
+        - `[ ]` Arestas: Ligações ou vizinhança (com features como distância).
+    - `[ ]` Implementar a função de conversão Estrutura -> Grafo.
 
-- `[x]` **Esta é uma das etapas mais cruciais. Você precisa converter as informações do material (composição química, estrutura cristalina) em um formato numérico que o modelo de IA possa entender.** (Anotação: Implementado via `process_raw_data.py` usando `pymatgen`.)
-- `[x]` **Tipos de Atributos: Baseados na Composição** (Anotação: Inclui fórmula reduzida, número de elementos, lista de elementos.)
-- `[x]` **Tipos de Atributos: Baseados na Estrutura** (Anotação: Inclui densidade, volume da célula, volume por átomo, número do grupo espacial, sistema cristalino, parâmetros de rede, número de sítios.)
-- `[x]` **Ferramentas: Bibliotecas como pymatgen (integrada com o Materials Project) e Matminer são extremamente úteis para gerar uma ampla variedade de descritores de materiais.** (Anotação: `pymatgen` é usado extensivamente. `Matminer` não é usado.)
+- `[ ]` **(Prioridade 6/20) Pré-processamento e Divisão do Dataset:**
+    - `[ ]` Processar todos os dados limpos, convertendo-os em objetos de grafo.
+    - `[ ]` Salvar este dataset processado para acesso rápido.
+    - `[ ]` Dividir o dataset em conjuntos de Treinamento (70%), Validação (15%) e Teste (15%).
 
-## 4. Seleção e Treinamento do Modelo de IA:
+## Fase II: 🤖 Desenvolvimento do Modelo Preditivo "OracleNet" (Prioridades 7-10)
 
-- `[x]` **Divisão de Dados: Separe seus dados em conjuntos de treinamento, validação e teste.** (Anotação: `train_test_split` do `scikit-learn` é usado.)
-- `[~]` **Seleção de Algoritmo: Redes Neurais (Aprendizado Profundo)** (Anotação: Aprendizado de Máquina Clássico (Random Forest) do `scikit-learn` é implementado. Redes Neurais ou Redes Neurais em Grafos não são implementadas.)
-- `[~]` **Treinamento:**
-    - `[~]` Escolha uma função de perda (ex: Erro Quadrático Médio para regressão). (Anotação: Implícito para Random Forest.)
-    - `[ ]` Escolha um otimizador (ex: Adam). (Anotação: Não aplicável para Random Forest como implementado.)
-    - `[ ]` Ajuste os hiperparâmetros do modelo (ex: taxa de aprendizado, número de camadas/neurônios em redes neurais, profundidade da árvore em Random Forest). (Anotação: Hiperparâmetros padrão usados para Random Forest; nenhum ajuste implementado.)
+Com os dados prontos, construímos a ferramenta que irá guiar nosso gerador.
 
-## 5. Avaliação do Modelo:
+- `[ ]` **(Prioridade 7/20) Design e Implementação da Arquitetura GNN Preditiva:**
+    - `[ ]` Escolher e implementar uma arquitetura GNN (ex: SchNet, GAT, MEGNet) para o OracleNet.
+    - `[ ]` O modelo deve aceitar um grafo como entrada e produzir um valor numérico (a Tc) como saída.
 
-- `[x]` **Métricas: Para problemas de regressão (como prever um gap de energia), use métricas como Erro Absoluto Médio (MAE), Raiz do Erro Quadrático Médio (RMSE), R² (coeficiente de determinação).** (Anotação: MAE e R² são implementados para modelos de regressão. RMSE não é, mas informação similar é transmitida.)
-- `[ ]` **Validação Cruzada: Uma técnica importante para obter uma estimativa mais robusta do desempenho do modelo.** (Anotação: Não implementado.)
-- `[~]` **Análise de Erro: Entenda onde seu modelo está falhando. Ele tem dificuldade com certos tipos de materiais ou faixas de valores?** (Anotação: Métricas básicas de avaliação são impressas. Nenhuma ferramenta ou relatório detalhado de análise de erro é gerado.)
+- `[ ]` **(Prioridade 8/20) Treinamento do Modelo Preditivo:**
+    - `[ ]` Escrever o loop de treinamento para o OracleNet.
+    - `[ ]` Treinar o modelo no conjunto de treinamento, usando o conjunto de validação para ajustar hiperparâmetros (taxa de aprendizado, tamanho das camadas, etc.).
 
-## 6. Iteração e Refinamento:
+- `[ ]` **(Prioridade 9/20) Avaliação Rigorosa do OracleNet:**
+    - `[ ]` Medir o desempenho do modelo treinado no conjunto de teste (que o modelo nunca viu).
+    - `[ ]` Métricas importantes: Erro Médio Absoluto (MAE), Raiz do Erro Quadrático Médio (RMSE).
+    - `[ ]` Ponto de verificação crítico: O OracleNet deve ter um poder preditivo significativamente melhor que um baseline aleatório. Se não, volte para a Fase I ou melhore a arquitetura.
 
-- `[~]` **Com base na avaliação, você pode precisar voltar às etapas anteriores:** (Anotação: O projeto fornece scripts e uma GUI que permitem a argumentação de dados e o retreinamento, apoiando um processo iterativo. No entanto, nenhum loop automatizado de iteração ou refinamento foi implementado ou executado.)
-    - `[~]` Coletar mais dados ou dados de melhor qualidade. (Anotação: Possível via modificação do script da API ou entrada manual.)
-    - `[ ]` Projetar novos atributos. (Anotação: O conjunto atual de atributos está fixo por enquanto.)
-    *   `[ ]` Tentar diferentes arquiteturas de modelo. (Anotação: Apenas Random Forest implementado.)
-    *   `[ ]` Ajustar melhor os hiperparâmetros. (Anotação: Não implementado.)
+- `[ ]` **(Prioridade 10/20) Análise de Erros e Interpretabilidade:**
+    - `[ ]` Analisar onde o OracleNet mais erra. Ele tem dificuldade com alguma família específica de materiais?
+    - `[ ]` Usar técnicas de explicabilidade (XAI para GNNs) para entender quais subestruturas o modelo considera importantes para a supercondutividade.
 
-## Ferramentas e Linguagens Comuns:
+## Fase III: ✨ Desenvolvimento do Modelo Gerativo "Creator" (Prioridades 11-16)
 
-- `[x]` **Python:** A linguagem dominante para aprendizado de máquina.
-- `[x]` **Bibliotecas Python Essenciais:**
-    - `[x]` **scikit-learn:** Para aprendizado de máquina clássico.
-    - `[ ]` **TensorFlow ou PyTorch:** Para aprendizado profundo.
-    - `[x]` **pymatgen:** Para manipular estruturas cristalinas e dados de materiais.
-    - `[ ]` **Matminer:** Para engenharia de atributos de materiais.
-    - `[x]` **Pandas:** Para manipular dados tabulares.
-    *   `[x]` **NumPy:** Para computação numérica (via pandas/sklearn).
-    *   `[ ]` **Matplotlib / Seaborn:** Para visualização de dados. (Anotação: Nenhuma funcionalidade específica de visualização de dados implementada neste projeto.)
+Agora, a parte mais inovadora: criar novos materiais.
 
-## Adiciona uma interface gráfica para a criação de novos materiais.
+- `[ ]` **(Prioridade 11/20) Design da Arquitetura GAN para Grafos:**
+    - `[ ]` Projetar as duas redes principais:
+        - `[ ]` Gerador: Uma GNN que recebe ruído e gera um novo grafo de material.
+        - `[ ]` Discriminador: Uma GNN que recebe um grafo e o classifica como real ou falso.
 
-- `[x]` **(Referindo-se à GUI para inserir candidatos de materiais para predição & entrada manual de dados)** (Anotação: A GUI Tkinter inclui uma aba "Prever a partir de CIF" e uma aba "Entrada Manual de Dados", cumprindo isso.)
+- `[ ]` **(Prioridade 12/20) Implementação da Função de Perda (Loss) Composta:**
+    - `[ ]` Esta é a lógica central. A função de perda do Gerador será uma soma ponderada de:
+        - `[ ]` Perda Adversária: Quão bem ele engana o Discriminador.
+        - `[ ]` Perda Preditiva: Quão alta é a Tc prevista pelo OracleNet para o material gerado (o objetivo é maximizar isso).
+        - `[ ]` (Opcional) Termos de regularização para garantir validade química.
 
----
-## Melhorias do Projeto
+- `[ ]` **(Prioridade 13/20) Implementação do Loop de Treinamento da GAN:**
+    - `[ ]` Escrever o script que alterna entre o treinamento do Discriminador (com dados reais e falsos) e o do Gerador (usando a loss composta). Este ciclo é mais complexo que o da Fase II.
 
-- `[x]` **Refatoração do Código da GUI:** O arquivo `material_predictor_gui.py` foi significativamente refatorado. Funcionalidades específicas de abas ('Prever a partir de CIF', 'Entrada Manual de Dados') foram movidas para suas próprias classes (`PredictionTab`, `ManualEntryTab`) para modularidade, legibilidade e manutenibilidade aprimoradas.
+- `[ ]` **(Prioridade 14/20) Treinamento do Sistema GAN Completo:**
+    - `[ ]` Executar o treinamento da GAN. Este passo é computacionalmente intensivo e pode exigir GPUs potentes.
+    - `[ ]` Monitorar as perdas do Gerador e do Discriminador para garantir que o treinamento está estável.
 
----
-## Considerações Futuras & Próximos Passos Potenciais (Dicas)
+- `[ ]` **(Prioridade 15/20) Geração do Lote Inicial de Candidatos:**
+    - `[ ]` Usar o Gerador treinado para criar um grande número (milhares) de novas estruturas moleculares que não existem na base de dados.
 
-Aqui estão algumas áreas potenciais para desenvolvimento e melhoria futuros:
+- `[ ]` **(Prioridade 16/20) Filtragem e Ranqueamento dos Candidatos Gerados:**
+    - `[ ]` Criar um pipeline para avaliar os candidatos gerados:
+        - `[ ]` Verificar validade química básica.
+        - `[ ]` Executar o OracleNet para prever a Tc de cada um.
+        - `[ ]` Ranquer os candidatos da Tc mais alta para a mais baixa.
 
-*   **Treinamento Avançado de Modelos:**
-    *   Implementar ajuste de hiperparâmetros (ex: usando `GridSearchCV` ou `RandomizedSearchCV` do `scikit-learn`) para os modelos Random Forest existentes para potencialmente melhorar seu desempenho.
-    *   Incorporar validação cruzada durante o processo de treinamento de modelos (`train_model.py`) para métricas de avaliação mais robustas.
-*   **Explorar Modelos Avançados:**
-    *   Se conjuntos de dados maiores e mais diversos se tornarem disponíveis, explorar arquiteturas de modelo mais avançadas, como:
-        *   Redes Neurais Feedforward (FNNs) para dados de atributos tabulares.
-        *   Redes Neurais em Grafos (GNNs), como CGCNN, que podem aprender diretamente de estruturas cristalinas (exigiria mudanças significativas na engenharia de atributos e representação de dados).
-*   **Avaliação & Análise Mais Profundas:**
-    *   Desenvolver ferramentas ou saídas de análise de erro mais detalhadas. Por exemplo, identificar tipos de materiais ou faixas de atributos onde os modelos têm desempenho ruim.
-    *   Implementar funcionalidade para plotar distribuições de atributos, distribuições de variáveis alvo ou correlações de predição (ex: gráficos de previsto vs. real). Isso pode envolver a integração de bibliotecas como Matplotlib/Seaborn, potencialmente como um script separado ou nova aba na GUI.
-*   **Gerenciamento de Dados & Escalabilidade:**
-    *   Para conjuntos de dados maiores, considerar a transição de CSVs para soluções de armazenamento mais robustas (ex: banco de dados SQLite, arquivos Parquet).
-    *   Se usando conjuntos de dados muito grandes ou modelos complexos, explorar ferramentas para rastreamento de experimentos (ex: MLflow, Weights & Biases).
-*   **Estrutura do Código & Projeto:**
-    *   `[x]` **Introduzir um arquivo de configuração (ex: YAML ou JSON) para gerenciar configurações como caminhos de modelos, caminhos de arquivos ou parâmetros padrão, em vez de tê-los codificados nos scripts.** (Anotação: Implementado `config.yml` que centraliza todas as principais configurações: chaves de API, caminhos de arquivos para dados/modelos, parâmetros para critérios de busca de dados e treinamento de modelos (ex: test_size, n_estimators). Todos os scripts agora carregam deste arquivo via `utils.config_loader`.)
-    *   `[x]` **Desenvolver um conjunto de testes unitários e de integração para garantir a confiabilidade do código e detectar regressões à medida que o projeto evolui.** (Anotação: Implementado um conjunto abrangente de testes no diretório `tests/` usando `pytest`. Testes unitários cobrem a lógica central em `fetch_mp_data` (simulando chamadas de API), `process_raw_data` (simulando pymatgen e E/S de arquivo), `train_model` (simulando sklearn e E/S de arquivo) e módulos utilitários. Um teste de integração verifica o pipeline de dados desde a busca até o treinamento de modelos usando o sistema de configuração. Testes de interação GUI estão pendentes devido a problemas de ambiente `tkinter`.)
-    *   `[x]` **Modularizar ainda mais o código, por exemplo, movendo funções utilitárias ou definições de esquema de dados para módulos separados.** (Anotação: Criado um diretório `utils/` contendo `config_loader.py` para carregamento padronizado de configuração e `schema.py` para definições centralizadas de esquema de dados (`DATA_SCHEMA`, `MANUAL_ENTRY_CSV_HEADERS`). Os scripts foram atualizados para usar esses utilitários, reduzindo a redundância.)
-*   **Melhorias na Interface do Usuário:**
-    *   Permitir a seleção de diferentes modelos treinados se múltiplas versões ou tipos estiverem disponíveis.
-    *   Fornecer feedback mais interativo ou visualizações dentro da GUI.
+## Fase IV: 🧪 Validação e Fechamento do Ciclo (Prioridades 17-20)
 
-[fim de ROADMAP_STATUS_pt.md]
+Onde a IA encontra o mundo real.
+
+- `[ ]` **(Prioridade 17/20) Triagem com Simulações Computacionais Clássicas:**
+    - `[ ]` Pegar o top ~100 da lista ranqueada.
+    - `[ ]` Realizar simulações mais precisas, porém mais lentas (como DFT), para verificar a estabilidade e as propriedades eletrônicas desses candidatos.
+
+- `[ ]` **(Prioridade 18/20) Seleção dos Candidatos Finais para Síntese:**
+    - `[ ]` Com base nos resultados da IA e da triagem computacional, selecionar um pequeno número (1 a 5) de candidatos "campeões" para validação experimental.
+
+- `[ ]` **(Prioridade 19/20) Colaboração para Síntese e Teste em Laboratório:**
+    - `[ ]` Este passo requer colaboração com um laboratório de física ou química de materiais.
+    - `[ ]` Os parceiros tentarão sintetizar os materiais propostos e medir suas propriedades reais, incluindo a Tc.
+
+- `[ ]` **(Prioridade 20/20) Fechamento do Ciclo de "Active Learning":**
+    - `[ ]` O passo mais importante para o sucesso a longo prazo.
+    - `[ ]` Pegar os resultados experimentais (seja sucesso ou falha) da Fase 19.
+    - `[ ]` Adicionar esses novos pontos de dados à sua base de dados original.
+    - `[ ]` Re-treinar o OracleNet e, opcionalmente, o sistema GAN com esses novos dados. O sistema ficará mais inteligente a cada iteração.
+    - `[ ]` Repetir o ciclo a partir da Fase III/IV.
