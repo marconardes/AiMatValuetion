@@ -6,23 +6,23 @@ Este plano transforma as fases estratégicas em um fluxo de trabalho acionável,
 
 O sucesso do projeto depende inteiramente da qualidade e da organização dos seus dados.
 
-- `[ ]` **(Prioridade 1/20) Setup do Ambiente de Desenvolvimento:**
-    - `[ ]` Configurar um repositório de código (Git).
+- `[~]` **(Prioridade 1/20) Setup do Ambiente de Desenvolvimento:**
+    - `[x]` Configurar um repositório de código (Git).
     - `[ ]` Instalar bibliotecas essenciais de IA (PyTorch, TensorFlow).
     - `[ ]` Instalar bibliotecas de IA para grafos (PyTorch Geometric ou DGL).
-    - `[ ]` Instalar bibliotecas de química/materiais (Pymatgen, RDKit).
+    - `[~]` Instalar bibliotecas de química/materiais (Pymatgen, RDKit).
 
-- `[ ]` **(Prioridade 2/20) Identificação e Acesso às Fontes de Dados:**
-    - `[ ]` Obter chaves de API e permissões para acessar bancos de dados como Materials Project, ICSD e SuperCon.
-    - `[ ]` Definir os critérios de busca para materiais relevantes.
+- `[~]` **(Prioridade 2/20) Identificação e Acesso às Fontes de Dados:**
+    - `[~]` Obter chaves de API e permissões para acessar bancos de dados como Materials Project, ICSD e SuperCon.
+    - `[~]` Definir os critérios de busca para materiais relevantes.
 
-- `[ ]` **(Prioridade 3/20) Desenvolvimento de Scripts para Extração de Dados:**
-    - `[ ]` Escrever e executar scripts para baixar sistematicamente os dados estruturais e de propriedades dos materiais selecionados.
-    - `[ ]` Armazenar os dados brutos em um formato organizado (ex: banco de dados local ou data lake).
+- `[x]` **(Prioridade 3/20) Desenvolvimento de Scripts para Extração de Dados:**
+    - `[x]` Escrever e executar scripts para baixar sistematicamente os dados estruturais e de propriedades dos materiais selecionados.
+    - `[x]` Armazenar os dados brutos em um formato organizado (ex: banco de dados local ou data lake).
 
-- `[ ]` **(Prioridade 4/20) Limpeza e Normalização dos Dados:**
-    - `[ ]` Validar os dados extraídos, tratando valores faltantes e inconsistências.
-    - `[ ]` Unificar unidades e formatos. Por exemplo, garantir que todas as estruturas cristalinas estejam em um formato padrão como arquivos CIF.
+- `[~]` **(Prioridade 4/20) Limpeza e Normalização dos Dados:**
+    - `[~]` Validar os dados extraídos, tratando valores faltantes e inconsistências.
+    - `[~]` Unificar unidades e formatos. Por exemplo, garantir que todas as estruturas cristalinas estejam em um formato padrão como arquivos CIF.
 
 - `[ ]` **(Prioridade 5/20) Definição e Implementação da Representação em Grafo:**
     - `[ ]` Definir formalmente como uma estrutura cristalina será convertida em um grafo.
@@ -30,10 +30,10 @@ O sucesso do projeto depende inteiramente da qualidade e da organização dos se
         - `[ ]` Arestas: Ligações ou vizinhança (com features como distância).
     - `[ ]` Implementar a função de conversão Estrutura -> Grafo.
 
-- `[ ]` **(Prioridade 6/20) Pré-processamento e Divisão do Dataset:**
+- `[~]` **(Prioridade 6/20) Pré-processamento e Divisão do Dataset:**
     - `[ ]` Processar todos os dados limpos, convertendo-os em objetos de grafo.
     - `[ ]` Salvar este dataset processado para acesso rápido.
-    - `[ ]` Dividir o dataset em conjuntos de Treinamento (70%), Validação (15%) e Teste (15%).
+    - `[~]` Dividir o dataset em conjuntos de Treinamento (70%), Validação (15%) e Teste (15%).
 
 ## Fase II: 🤖 Desenvolvimento do Modelo Preditivo "OracleNet" (Prioridades 7-10)
 
@@ -43,13 +43,13 @@ Com os dados prontos, construímos a ferramenta que irá guiar nosso gerador.
     - `[ ]` Escolher e implementar uma arquitetura GNN (ex: SchNet, GAT, MEGNet) para o OracleNet.
     - `[ ]` O modelo deve aceitar um grafo como entrada e produzir um valor numérico (a Tc) como saída.
 
-- `[ ]` **(Prioridade 8/20) Treinamento do Modelo Preditivo:**
+- `[~]` **(Prioridade 8/20) Treinamento do Modelo Preditivo:**
     - `[ ]` Escrever o loop de treinamento para o OracleNet.
-    - `[ ]` Treinar o modelo no conjunto de treinamento, usando o conjunto de validação para ajustar hiperparâmetros (taxa de aprendizado, tamanho das camadas, etc.).
+    - `[~]` Treinar o modelo no conjunto de treinamento, usando o conjunto de validação para ajustar hiperparâmetros (taxa de aprendizado, tamanho das camadas, etc.).
 
-- `[ ]` **(Prioridade 9/20) Avaliação Rigorosa do OracleNet:**
-    - `[ ]` Medir o desempenho do modelo treinado no conjunto de teste (que o modelo nunca viu).
-    - `[ ]` Métricas importantes: Erro Médio Absoluto (MAE), Raiz do Erro Quadrático Médio (RMSE).
+- `[~]` **(Prioridade 9/20) Avaliação Rigorosa do OracleNet:**
+    - `[~]` Medir o desempenho do modelo treinado no conjunto de teste (que o modelo nunca viu).
+    - `[~]` Métricas importantes: Erro Médio Absoluto (MAE), Raiz do Erro Quadrático Médio (RMSE).
     - `[ ]` Ponto de verificação crítico: O OracleNet deve ter um poder preditivo significativamente melhor que um baseline aleatório. Se não, volte para a Fase I ou melhore a arquitetura.
 
 - `[ ]` **(Prioridade 10/20) Análise de Erros e Interpretabilidade:**
