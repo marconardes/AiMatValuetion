@@ -1,5 +1,12 @@
 # Roadmap para Descoberta de Supercondutores com IA: Um Plano de 20 Passos
 
+**Legenda:**
+- `[x]` Implementado
+- `[~]` Parcialmente Implementado ou Versão Básica Existente
+- `[ ]` Não Implementado
+
+---
+
 Este plano transforma as fases estratégicas em um fluxo de trabalho acionável, com prioridades claras do setup inicial até a validação experimental.
 
 ## Fase I: 🏗️ Construção da Fundação de Dados (Prioridades 1-6)

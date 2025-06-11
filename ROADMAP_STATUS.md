@@ -1,5 +1,12 @@
 # AI Superconductor Discovery Roadmap: A 20-Step Plan
 
+**Legend:**
+- `[x]` Implemented
+- `[~]` Partially Implemented or Basic Version Exists
+- `[ ]` Not Implemented
+
+---
+
 This plan transforms strategic phases into an actionable workflow, with clear priorities from initial setup to experimental validation.
 
 ## Phase I: 🏗️ Building the Data Foundation (Priorities 1-6)
