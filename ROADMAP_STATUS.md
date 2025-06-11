@@ -15,7 +15,7 @@ The project's success hinges entirely on the quality and organization of your da
 
 - `[~]` **(Priority 1/20) Development Environment Setup:**
     - `[x]` Set up a code repository (Git).
-    - `[ ]` Install essential AI libraries (PyTorch, TensorFlow).
+    - `[~]` Install essential AI libraries (PyTorch, TensorFlow).
     - `[ ]` Install AI libraries for graphs (PyTorch Geometric or DGL).
     - `[~]` Install chemistry/materials libraries (Pymatgen, RDKit).
 

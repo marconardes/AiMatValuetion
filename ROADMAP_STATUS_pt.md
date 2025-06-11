@@ -15,7 +15,7 @@ O sucesso do projeto depende inteiramente da qualidade e da organização dos se
 
 - `[~]` **(Prioridade 1/20) Setup do Ambiente de Desenvolvimento:**
     - `[x]` Configurar um repositório de código (Git).
-    - `[ ]` Instalar bibliotecas essenciais de IA (PyTorch, TensorFlow).
+    - `[~]` Instalar bibliotecas essenciais de IA (PyTorch, TensorFlow).
     - `[ ]` Instalar bibliotecas de IA para grafos (PyTorch Geometric ou DGL).
     - `[~]` Instalar bibliotecas de química/materiais (Pymatgen, RDKit).
 
