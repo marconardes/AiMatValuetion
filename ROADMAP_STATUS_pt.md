@@ -25,7 +25,7 @@ O sucesso do projeto depende inteiramente da qualidade e da organização dos se
 
 - `[~]` **(Prioridade 3/20) Desenvolvimento de Scripts para Extração de Dados:**
     - `[x]` Scripts para extração de dados do Materials Project existem.
-    - `[ ]` Desenvolver script para processar dataset local SuperCon (`raw.tsv`) para composições e Tc.
+    - `[x]` Desenvolver script para processar dataset local SuperCon (`raw.tsv`) para composições e Tc.
     - `[ ]` Desenvolver script para buscar dados complementares da API OQMD para composições do SuperCon.
     - `[x]` Armazenar os dados brutos em um formato organizado (ex: banco de dados local ou data lake).
 

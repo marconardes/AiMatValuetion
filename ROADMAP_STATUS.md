@@ -25,7 +25,7 @@ The project's success hinges entirely on the quality and organization of your da
 
 - `[~]` **(Priority 3/20) Development of Data Extraction Scripts:**
     - `[x]` Scripts for Materials Project data extraction exist.
-    - `[ ]` Develop script to process local SuperCon dataset (`raw.tsv`) for compositions and Tc.
+    - `[x]` Develop script to process local SuperCon dataset (`raw.tsv`) for compositions and Tc.
     - `[ ]` Develop script to fetch complementary data from OQMD API for SuperCon compositions.
     - `[x]` Store raw data in an organized format (e.g., local database or data lake).
 
