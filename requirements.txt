@@ -150,3 +150,5 @@ zipp==3.21.0
 zstandard==0.23.0
 pytest>=7.0.0
 torch
+rdkit-pypi
+torch_geometric

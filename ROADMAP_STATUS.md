@@ -16,8 +16,8 @@ The project's success hinges entirely on the quality and organization of your da
 - `[~]` **(Priority 1/20) Development Environment Setup:**
     - `[x]` Set up a code repository (Git).
     - `[~]` Install essential AI libraries (PyTorch, TensorFlow).
-    - `[ ]` Install AI libraries for graphs (PyTorch Geometric or DGL).
-    - `[~]` Install chemistry/materials libraries (Pymatgen, RDKit).
+    - `[~]` Install AI libraries for graphs (PyTorch Geometric or DGL).
+    - `[x]` Install chemistry/materials libraries (Pymatgen, RDKit).
 
 - `[~]` **(Priority 2/20) Identification and Access to Data Sources:**
     - `[~]` Obtain API keys and permissions to access databases like Materials Project, ICSD, and SuperCon.
