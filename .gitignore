@@ -176,3 +176,4 @@ cython_debug/
 # Custom entries
 supercon-dataset.zip
 supercon_data/
+oqmd_data_raw.json
