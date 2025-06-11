@@ -20,11 +20,13 @@ O sucesso do projeto depende inteiramente da qualidade e da organização dos se
     - `[x]` Instalar bibliotecas de química/materiais (Pymatgen, RDKit).
 
 - `[~]` **(Prioridade 2/20) Identificação e Acesso às Fontes de Dados:**
-    - `[~]` Obter chaves de API e permissões para acessar bancos de dados como Materials Project, ICSD e SuperCon.
-    - `[~]` Definir os critérios de busca para materiais relevantes.
+    - `[~]` Acessar Materials Project (API), SuperCon (arquivos locais), OQMD (API identificada); ICSD pendente.
+    - `[~]` Definir critérios de busca (SuperCon para Tc, OQMD/MP para propriedades).
 
-- `[x]` **(Prioridade 3/20) Desenvolvimento de Scripts para Extração de Dados:**
-    - `[x]` Escrever e executar scripts para baixar sistematicamente os dados estruturais e de propriedades dos materiais selecionados.
+- `[~]` **(Prioridade 3/20) Desenvolvimento de Scripts para Extração de Dados:**
+    - `[x]` Scripts para extração de dados do Materials Project existem.
+    - `[ ]` Desenvolver script para processar dataset local SuperCon (`raw.tsv`) para composições e Tc.
+    - `[ ]` Desenvolver script para buscar dados complementares da API OQMD para composições do SuperCon.
     - `[x]` Armazenar os dados brutos em um formato organizado (ex: banco de dados local ou data lake).
 
 - `[~]` **(Prioridade 4/20) Limpeza e Normalização dos Dados:**
