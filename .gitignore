@@ -172,3 +172,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Custom entries
+supercon-dataset.zip
+supercon_data/
+oqmd_data_raw.json
