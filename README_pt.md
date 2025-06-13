@@ -144,6 +144,52 @@ A estratégia de aquisição de dados baseia-se em papéis específicos para cad
 *   **OQMD (Open Quantum Materials Database)**: O OQMD é utilizado para obter propriedades complementares dos materiais (ex.: energia de formação, band gap, estrutura cristalina) para composições identificadas no conjunto de dados SuperCon. Serve também como uma base de dados mais ampla para obter propriedades de materiais e estruturas cristalinas para análise geral e treino de modelos.
 *   **Materials Project (MP)**: A API do Materials Project é uma fonte *opcional* para adquirir propriedades complementares de materiais e estruturas cristalinas. Pode ser usada de forma semelhante ao OQMD para enriquecer o conjunto de dados ou como uma fonte alternativa para tais informações.
 
+## Modelo GNN OracleNet
+
+Este projeto inclui o OracleNet, um modelo de Rede Neural de Grafos (GNN) projetado para prever propriedades de materiais. O GNN utiliza estruturas de materiais representadas como grafos (onde os nós são átomos e as arestas são ligações/conexões) e aprende a prever propriedades alvo.
+
+### Preparação de Dados para o GNN
+
+Antes de treinar o GNN, os dados do grafo precisam ser preparados:
+- Dados brutos de materiais (e.g., do Materials Project ou OQMD contendo strings CIF e propriedades alvo) são processados em estruturas de grafo.
+- O script `scripts/prepare_gnn_data.py` lida com essa conversão. Ele recebe dados brutos (e.g., `mp_raw_data.json`), converte estruturas em grafos usando `pymatgen` e `torch_geometric`, e salva os conjuntos de dados (`train_graphs.pt`, `val_graphs.pt`, `test_graphs.pt`) no diretório `data/`.
+  - As características dos nós (node features) tipicamente incluem número atômico e eletronegatividade.
+  - As características das arestas (edge features) podem incluir distâncias interatômicas.
+  - As propriedades alvo (e.g., gap de banda, energia de formação) são armazenadas com cada grafo.
+
+### Treinando o Modelo GNN
+
+O modelo OracleNet GNN pode ser treinado usando o seguinte script:
+
+```bash
+python scripts/train_gnn_model.py
+```
+
+- Este script carrega os dados de grafo pré-processados de `data/train_graphs.pt` e `data/val_graphs.pt`.
+- Ele instancia o modelo `OracleNetGNN` (uma arquitetura baseada em GCN definida em `models/gnn_oracle_net.py`).
+- O treinamento envolve a otimização do modelo para prever uma propriedade alvo (e.g., gap de banda, especificada por `gnn_target_index` na configuração).
+- O script usa um otimizador Adam e a perda de Erro Quadrático Médio (MSE).
+- O modelo com a menor perda de validação é salvo em `data/oracle_net_gnn.pth` (ou conforme configurado).
+- Hiperparâmetros chave de treinamento (taxa de aprendizado, tamanho do lote, épocas, canais ocultos, índice do alvo) podem ser configurados em `config.yml` na seção `gnn_settings`.
+
+### Avaliando o Modelo GNN
+
+Para avaliar o desempenho do modelo GNN treinado no conjunto de teste:
+
+```bash
+python scripts/evaluate_gnn_model.py
+```
+
+- Este script carrega o modelo treinado de `data/oracle_net_gnn.pth` e os dados de teste de `data/test_graphs.pt`.
+- Ele calcula e reporta métricas como Erro Absoluto Médio (MAE) e Raiz do Erro Quadrático Médio (RMSE).
+- O desempenho do GNN também é comparado com um preditor de linha de base aleatório.
+- Uma análise de erro básica é realizada para mostrar as N predições com os maiores erros, ajudando a identificar áreas onde o modelo tem dificuldades.
+- A configuração para avaliação (e.g., caminhos, `gnn_target_index`) também é gerenciada via `config.yml` em `gnn_settings`.
+
+### Configuração do GNN
+
+Todas as configurações relacionadas ao modelo GNN, treinamento, avaliação e geração de dados fictícios (usados se os arquivos de dados reais estiverem ausentes) estão localizadas em `config.yml` sob a chave `gnn_settings:`. Isso inclui caminhos de arquivo, parâmetros de aprendizado, detalhes da arquitetura do modelo (como canais ocultos) e seleção da propriedade alvo.
+
 ## Pilha Tecnológica (Stack)
 
 Este projeto utiliza as seguintes tecnologias principais:
