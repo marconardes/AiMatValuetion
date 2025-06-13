@@ -56,10 +56,10 @@ The project's success hinges entirely on the quality and organization of your da
         - `[x]` Edges: Bonds or neighborhood (with features like distance). (I)
     - `[x]` Implement the Structure -> Graph conversion function. (A)
 
-- `[~]` **(Priority 6/20) Dataset Preprocessing and Splitting:** (I)
-    - `[ ]` Process all cleaned data, converting them into graph objects. (A)
-    - `[ ]` Save this processed dataset for quick access. (B)
-    - `[~]` Split the dataset into Training (70%), Validation (15%), and Test (15%) sets. (B)
+- `[x]` **(Priority 6/20) Dataset Preprocessing and Splitting:** (I)
+    - `[x]` Process all cleaned data, converting them into graph objects. (A)
+    - `[x]` Save this processed dataset for quick access. (B)
+    - `[x]` Split the dataset into Training (70%), Validation (20%), and Test (10%) sets. (B)
 
 ## Phase II: 🤖 Development of the "OracleNet" Predictive Model (Priorities 7-10)
 
