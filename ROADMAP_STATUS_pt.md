@@ -59,7 +59,7 @@ O sucesso do projeto depende inteiramente da qualidade e da organização dos se
 - `[~]` **(Prioridade 6/20) Pré-processamento e Divisão do Dataset:** (I)
     - `[ ]` Processar todos os dados limpos, convertendo-os em objetos de grafo. (A)
     - `[ ]` Salvar este dataset processado para acesso rápido. (B)
-    - `[~]` Dividir o dataset em conjuntos de Treinamento (70%), Validação (15%) e Teste (15%). (B)
+    - `[~]` Dividir o dataset em conjuntos de Treinamento (70%), Validação (20%) e Teste (10%). (B)
 
 ## Fase II: 🤖 Desenvolvimento do Modelo Preditivo "OracleNet" (Prioridades 7-10)
 
