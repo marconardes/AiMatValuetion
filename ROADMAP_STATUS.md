@@ -82,36 +82,46 @@ With the data ready, we build the tool that will guide our generator.
     - `[ ]` Analyze where OracleNet makes the most mistakes. Does it struggle with any specific family of materials? (I)
     - `[ ]` Use explainability techniques (XAI for GNNs) to understand which substructures the model considers important for superconductivity. (A)
 
-## Phase III: ✨ Development of the "Creator" Generative Model (Priorities 11-16)
+## Phase III (Revisada): ✨ Development of the "Creator" Generative Model with VAE + LNN (Priorities 11-16)
 
-Now, the most innovative part: creating new materials.
+Objective: Create a system that generates chemically valid and physically stable materials (using LNN), optimized for high Tc (using VAE and OracleNet).
 
-- `[ ]` **(Priority 11/20) Design of the GAN Architecture for Graphs:** (A)
-    - `[ ]` Design the two main networks: (A)
-        - `[ ]` Generator: A GNN that takes noise and generates a new material graph. (A)
-        - `[ ]` Discriminator: A GNN that takes a graph and classifies it as real or fake. (A)
+- `[ ]` **(Priority 11/20) Design of the Hybrid Architecture (VAE + LNN):**
+    - `[ ]` Design the main generative architecture (VAE-based):
+        - `[ ]` Encoder (GNN): Compresses a material graph into a latent space vector.
+        - `[ ]` Decoder (GNN): Generates a new material graph from a latent space vector.
+    - `[ ]` Design the physical validation network:
+        - `[ ]` Lagrangian Neural Network (LNN): A network trained to learn an approximation of the potential energy of an atomic configuration. It will receive a generated graph and evaluate its energy stability.
 
-- `[ ]` **(Priority 12/20) Implementation of the Composite Loss Function:** (A)
-    - `[ ]` This is the core logic. The Generator's loss function will be a weighted sum of: (A)
-        - `[ ]` Adversarial Loss: How well it fools the Discriminator. (A)
-        - `[ ]` Predictive Loss: How high the Tc predicted by OracleNet is for the generated material (the goal is to maximize this). (A)
-        - `[ ]` (Optional) Regularization terms to ensure chemical validity. (I)
+- `[ ]` **(Priority 12/20) Implementation of the Advanced Composite Loss Function:**
+    - `[ ]` This is the logic that connects generation, property optimization, and physical realism. The VAE's loss will be a weighted sum of:
+        - `[ ]` Reconstruction Loss: How well the VAE reconstructs input data.
+        - `[ ]` KL Divergence Loss: Standard VAE latent space regularization.
+        - `[ ]` Predictive Loss (OracleNet): Encourages generation of materials with high Tc predicted by OracleNet.
+        - `[ ]` Physical Stability Loss (LNN): Penalizes the generator for creating structures that the LNN classifies as high energy (unstable or physically implausible). This is the crucial link to the LNN.
 
-- `[ ]` **(Priority 13/20) Implementation of the GAN Training Loop:** (A)
-    - `[ ]` Write the script that alternates between training the Discriminator (with real and fake data) and the Generator (using the composite loss). This cycle is more complex than in Phase II. (A)
+- `[ ]` **(Priority 13/20) Implementation of the Hybrid Training Loop:**
+    - `[ ]` Write the script that trains the VAE system. LNN training can be done separately with simulation data (e.g., DFT) or jointly.
+    - `[ ]` In the main VAE training loop:
+        - `[ ]` Generate a "fake" graph with the Decoder.
+        - `[ ]` Pass the graph through OracleNet to get the predictive loss.
+        - `[ ]` Pass the same graph through the pre-trained LNN to get the stability loss.
+        - `[ ]` Calculate the composite loss and update VAE weights.
 
-- `[ ]` **(Priority 14/20) Training the Complete GAN System:** (A)
-    - `[ ]` Run the GAN training. This step is computationally intensive and may require powerful GPUs. (A)
-    - `[ ]` Monitor the Generator and Discriminator losses to ensure training is stable. (I)
+- `[ ]` **(Priority 14/20) Training the Models:**
+    - `[ ]` 1. Train the LNN: Train the network to predict the energy of atomic configurations from a database of known materials and their calculated energies.
+    - `[ ]` 2. Train the VAE System: Run VAE training using the composite loss function, which now includes feedback from the already trained LNN. Monitor all loss components.
 
-- `[ ]` **(Priority 15/20) Generation of the Initial Batch of Candidates:** (I)
-    - `[ ]` Use the trained Generator to create a large number (thousands) of new molecular structures that do not exist in the database. (I)
+- `[ ]` **(Priority 15/20) Generation of the Batch of Physically Valid Candidates:**
+    - `[ ]` Use the trained VAE Decoder to generate thousands of new structures.
+    - `[ ]` By design, these structures have already been optimized during training to be candidates for high Tc and physical stability.
 
-- `[ ]` **(Priority 16/20) Filtering and Ranking of Generated Candidates:** (I)
-    - `[ ]` Create a pipeline to evaluate the generated candidates: (I)
-        - `[ ]` Check basic chemical validity. (B)
-        - `[ ]` Run OracleNet to predict the Tc of each one. (I)
-        - `[ ]` Rank candidates from highest Tc to lowest. (B)
+- `[ ]` **(Priority 16/20) Advanced Filtering and Ranking of Candidates:**
+    - `[ ]` Create a final, more robust evaluation pipeline:
+        - `[ ]` Final chemical validity check.
+        - `[ ]` Re-run LNN to get an accurate energy stability score for each finalist candidate.
+        - `[ ]` Run OracleNet to predict Tc for each.
+        - `[ ]` Rank candidates using a combined criterion: highest predicted Tc AND lowest energy (highest stability).
 
 ## Phase IV: 🧪 Validation and Closing the Loop (Priorities 17-20)
 
