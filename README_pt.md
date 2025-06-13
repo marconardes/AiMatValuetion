@@ -13,6 +13,7 @@ Este projeto é uma aplicação GUI Tkinter desenhada como um protótipo para pr
 O projeto está estruturado em vários componentes chave:
 *   **Scripts de Aquisição de Dados (`fetch_mp_data.py`, `process_raw_data.py`):** Estes scripts lidam com a criação e preparação do conjunto de dados de fontes externas como o Materials Project.
 *   **Script de Treinamento de Modelos (`train_model.py`):** Este script é responsável por treinar modelos de aprendizado de máquina usando o conjunto de dados processado.
+*   **Script de Preparação de Dataset para GNN (`prepare_gnn_data.py`):** Este script processa dados brutos de materiais (ex: de strings CIF no output JSON de `fetch_mp_data.py`) em representações de grafo adequadas para Redes Neurais de Grafos (GNNs). Ele converte estruturas em objetos `torch_geometric.data.Data`, salva o conjunto de dados de grafos processados completo e o divide em conjuntos de treinamento, validação e teste. Isso é essencial para o desenvolvimento de modelos baseados em GNN.
 *   **Aplicação GUI (`material_predictor_gui.py`):** Fornece a interface de usuário principal para interagir com os modelos de predição e gerenciar dados.
 *   **Arquivo de Configuração (`config.yml`):** Um arquivo YAML central para gerenciar todas as configurações operacionais importantes, caminhos de arquivos, chaves de API e parâmetros de modelos. Isso melhora a manutenibilidade separando as configurações do código, tornando mais fácil para os usuários adaptar o projeto às suas necessidades ou diferentes ambientes sem alterar os scripts Python.
 *   **Utilitários (`utils/`):** Este diretório contém módulos Python compartilhados:
@@ -33,6 +34,10 @@ O fluxo de trabalho geral envolve:
     *   **`process_raw_data.py`**: Este script processa o arquivo de dados JSON bruto.
         *   Ele usa `pymatgen` para analisar strings CIF e extrair características estruturais.
         *   Ele combina estas com dados originados da API e salva o resultado em `Fe_materials_dataset.csv`.
+    *   **`prepare_gnn_data.py` (Para Modelos GNN):** Este script pega os dados brutos (ex: `mp_raw_data.json`) e os converte em conjuntos de dados de grafos.
+        *   Processa materiais em objetos `torch_geometric.data.Data`.
+        *   Salva o conjunto de dados completo e os conjuntos pré-divididos de treino/validação/teste como arquivos `.pt`.
+        *   A configuração para este script (caminhos de entrada/saída, proporções de divisão) é gerenciada em `config.yml` na seção `prepare_gnn_data`.
     *   **Conjunto de Dados de Exemplo**: Um `Fe_materials_dataset.csv` de exemplo está incluído no repositório. Isso permite que a GUI e o script de treinamento de modelos rodem para fins de demonstração, mesmo que você não busque imediatamente novos dados da API. Os nomes dos arquivos de entrada e saída são configuráveis via `config.yml`.
 
 3.  **Treinamento de Modelos (`train_model.py`):**
@@ -90,6 +95,7 @@ O fluxo de trabalho geral envolve:
         1.  **Certifique-se de que a Chave de API está definida em `config.yml`**. (Fallback para a variável de ambiente `MP_API_KEY` também é possível se `mp_api_key` em `config.yml` for um placeholder ou estiver ausente).
         2.  Execute a busca de dados: `python fetch_mp_data.py` (usa configurações de `config.yml`)
         3.  Processe dados brutos: `python process_raw_data.py` (usa configurações de `config.yml`)
+        3b. Preparar dataset GNN (se usando modelos GNN): `python prepare_gnn_data.py` (usa configurações de `config.yml`)
         4.  Treine modelos: `python train_model.py` (usa configurações de `config.yml`)
         5.  Execute a GUI: `python material_predictor_gui.py` (carrega modelos e conjuntos de dados conforme `config.yml`)
 
@@ -102,6 +108,12 @@ As configurações do projeto são gerenciadas centralmente no arquivo `config.y
 *   `fetch_data`: Parâmetros para `fetch_mp_data.py`, como `max_total_materials` a serem buscados, `output_filename` para os dados JSON brutos, e `criteria_sets` para definir os critérios de busca no Materials Project (ex: número de elementos, elementos específicos como 'Fe'). Um valor especial de `-5` para `max_total_materials` instruirá o script a tentar buscar todos os materiais que correspondam aos critérios combinados da consulta inicial da API, ignorando os limites individuais de `limit_per_set` e o limite geral de `max_total_materials`.
 *   `process_data`: Configurações para `process_raw_data.py`, incluindo `raw_data_filename` (entrada) e `output_filename` para o conjunto de dados CSV processado.
 *   `train_model`: Configuração para `train_model.py`, como `dataset_filename` (CSV de entrada), `test_size` para divisão treino-teste, `random_state` para reprodutibilidade, `n_estimators` para modelos Random Forest, e caminhos para salvar `models` treinados e `preprocessors`.
+*   `prepare_gnn_data`: Configurações para `prepare_gnn_data.py`.
+    *   `raw_data_filename`: Arquivo JSON de entrada contendo dados brutos de materiais (ex: `mp_raw_data.json`).
+    *   `processed_graphs_filename`: Caminho de saída para o arquivo contendo a lista completa de objetos `torch_geometric.data.Data` processados (ex: `data/processed/processed_graphs.pt`).
+    *   `train_graphs_filename`, `val_graphs_filename`, `test_graphs_filename`: Caminhos de saída para os conjuntos de dados divididos (objetos de grafo de treinamento, validação e teste).
+    *   `random_seed`: Semente inteira para divisão reprodutível do conjunto de dados.
+    *   `train_ratio`, `val_ratio`, `test_ratio`: Valores de ponto flutuante para as proporções da divisão do conjunto de dados (ex: 0.7, 0.2, 0.1).
 *   `gui`: Configurações para `material_predictor_gui.py`, como o `title` da aplicação, `geometry` da janela, caminhos para `models_to_load`, e `manual_entry_csv_filename` para salvar dados inseridos manualmente.
 
 **Importante:** Antes de executar `fetch_mp_data.py` pela primeira vez, você **deve** atualizar o campo `mp_api_key` em `config.yml` com sua chave de API pessoal do Materials Project. Se esta chave não for encontrada ou estiver definida com o placeholder `"YOUR_MP_API_KEY"` em `config.yml`, o sistema então verificará a variável de ambiente `MP_API_KEY` como um fallback.
