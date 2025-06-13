@@ -148,29 +148,128 @@ The data acquisition strategy relies on specific roles for each data source:
 
 This project includes OracleNet, a Graph Neural Network (GNN) model designed for predicting material properties. The GNN takes material structures represented as graphs (nodes being atoms, edges being bonds/connections) and learns to predict target properties.
 
+#### Model Architecture
+
+The `OracleNetGNN` (defined in `models/gnn_oracle_net.py`) is a Graph Convolutional Network (GCN) built using PyTorch Geometric. Its architecture is designed to process graph-based material data and predict a single numerical property.
+
+The key components are:
+
+*   **Input Layer**: The model expects graph data objects from `torch_geometric.data.Data`. Each object should contain:
+    *   `x`: Node feature matrix of shape `[num_nodes, num_node_features]`. Typically, `num_node_features` is 2, representing atomic number and Pauling electronegativity.
+    *   `edge_index`: Graph connectivity in COO format, shape `[2, num_edges]`, type `torch.long`.
+    *   `edge_attr`: Edge feature matrix, shape `[num_edges, num_edge_features]`. Typically, `num_edge_features` is 1, representing interatomic distance. (Note: The current `GCNConv` layers use these as `edge_weight` if they are 1-dimensional, otherwise they might be ignored by standard `GCNConv` if not explicitly handled).
+    *   `batch`: A vector assigning each node to its respective graph in a batch, shape `[num_nodes]`, type `torch.long`.
+
+*   **Graph Convolutional Layers**:
+    *   The model employs two `GCNConv` layers from PyTorch Geometric.
+    *   The first `GCNConv` layer maps the input node features to a higher-dimensional space (`hidden_channels`).
+    *   The second `GCNConv` layer further processes these embeddings.
+    *   Each `GCNConv` layer is followed by a `ReLU` activation function to introduce non-linearity.
+    *   If edge attributes (`edge_attr`) are 1-dimensional (e.g., scalar distances), they can be passed as `edge_weight` to the `GCNConv` layers, influencing the message passing.
+
+*   **Global Pooling**:
+    *   After the convolutional layers, a `global_mean_pool` operation is applied. This aggregates all node embeddings within each graph in a batch into a single graph-level embedding vector of size `hidden_channels`. This allows the model to handle graphs of varying sizes.
+
+*   **Output Layer**:
+    *   A dropout layer (`F.dropout`) is applied to the graph-level embedding for regularization during training.
+    *   Finally, a linear layer (`torch.nn.Linear`) maps the graph embedding to a single numerical output value, which is the predicted material property.
+
+The overall data flow is:
+`Input Graph Batch -> GCNConv1 -> ReLU -> GCNConv2 -> ReLU -> Global Mean Pooling -> Dropout -> Linear Output Layer -> Predicted Value(s)`
+
 ### Data Preparation for GNN
 
-Before training the GNN, graph data needs to be prepared:
-- Raw material data (e.g., from Materials Project or OQMD containing CIF strings and target properties) is processed into graph structures.
-- The script `scripts/prepare_gnn_data.py` handles this conversion. It takes raw data (e.g., `mp_raw_data.json`), converts structures to graphs using `pymatgen` and `torch_geometric`, and saves datasets (`train_graphs.pt`, `val_graphs.pt`, `test_graphs.pt`) in the `data/` directory.
-  - Node features typically include atomic number and electronegativity.
-  - Edge features may include interatomic distances.
-  - Target properties (e.g., band gap, formation energy) are stored with each graph.
+Effective GNN performance relies on well-structured graph data. The preparation process involves converting raw material information (typically crystallographic data and target properties) into graph representations suitable for `torch_geometric`.
+
+1.  **Raw Data Input**:
+    *   The process starts with raw material data, often sourced from databases like the Materials Project or OQMD. This data is typically expected in a JSON format (e.g., `data/mp_raw_data.json` as configured in `config.yml`).
+    *   Each material entry in the JSON file should ideally contain a CIF (Crystallographic Information File) string and the target properties to be predicted (e.g., band gap, formation energy).
+
+2.  **Structure to Graph Conversion (`utils/graph_utils.py`)**:
+    *   The core of the graph conversion is handled by the `structure_to_graph` function within `utils/graph_utils.py`.
+    *   This function takes a `pymatgen.core.structure.Structure` object (parsed from the CIF string) as input.
+    *   **Node Feature Extraction**: For each atom (site) in the structure, it extracts:
+        *   `atomic_number`: The atomic number of the element (e.g., Si is 14).
+        *   `electronegativity`: The Pauling electronegativity of the element (e.g., Si is approx. 1.90).
+        These are assembled into a node feature vector for each atom.
+    *   **Edge Definition and Feature Extraction**:
+        *   Edges are typically defined between atoms that are within a certain cutoff radius of each other (e.g., 3.0 Angstroms, as defined in `structure_to_graph`).
+        *   For each such pair of atoms (potential edge), the actual interatomic `distance` is calculated. This distance serves as the primary edge feature.
+        The graph connectivity (`edge_index`) and edge features (`edge_attr`) are constructed based on these criteria.
+
+3.  **Graph Dataset Creation (`scripts/prepare_gnn_data.py`)**:
+    *   The `scripts/prepare_gnn_data.py` script orchestrates the entire data preparation workflow:
+        *   It loads the raw material entries from the specified JSON file.
+        *   For each material, it parses the CIF string into a `pymatgen` Structure object.
+        *   It then calls `structure_to_graph` to get the node features, edge index, and edge features.
+        *   These components are used to construct `torch_geometric.data.Data` objects. Each `Data` object represents a single material graph and stores:
+            *   `x`: Tensor of node features (atomic number, electronegativity).
+            *   `edge_index`: Tensor defining graph connectivity.
+            *   `edge_attr`: Tensor of edge features (distances).
+            *   `y`: A tensor containing the target property/properties. For instance, if predicting band gap and formation energy, `y` might be `torch.tensor([[band_gap_value, formation_energy_value]])`. The specific target used during training is determined by `gnn_target_index` in the `config.yml`.
+            *   `material_id`: The original material identifier for tracking.
+        *   The script processes all materials, skips those with errors (e.g., missing CIFs, inability to parse), and collects all valid `Data` objects.
+    *   Finally, the script splits the full dataset into training, validation, and test sets based on ratios defined in `config.yml` (e.g., 70% train, 20% validation, 10% test).
+    *   These split datasets are saved as PyTorch tensor files (`.pt`) in the `data/` directory (e.g., `train_graphs.pt`, `val_graphs.pt`, `test_graphs.pt`), ready to be loaded by the training and evaluation scripts.
+
+This detailed preparation ensures that the GNN receives consistent and meaningful graph representations of materials.
 
 ### Training the GNN Model
 
-The OracleNet GNN model can be trained using the following script:
+The OracleNet GNN is trained using the `scripts/train_gnn_model.py` script. This script orchestrates loading data, running the training epochs, validating the model, and saving the best performing version.
 
+**Execution:**
+To start the training process, run:
 ```bash
 python scripts/train_gnn_model.py
 ```
 
-- This script loads the preprocessed graph data from `data/train_graphs.pt` and `data/val_graphs.pt`.
-- It instantiates the `OracleNetGNN` model (a GCN-based architecture defined in `models/gnn_oracle_net.py`).
-- Training involves optimizing the model to predict a target property (e.g., band gap, specified by `gnn_target_index` in the configuration).
-- The script uses an Adam optimizer and Mean Squared Error (MSE) loss.
-- The model with the best validation loss is saved to `data/oracle_net_gnn.pth` (or as configured).
-- Key training hyperparameters (learning rate, batch size, epochs, hidden channels, target index) can be configured in `config.yml` under the `gnn_settings` section.
+**Key Steps in the Training Process:**
+
+1.  **Configuration and Setup**:
+    *   The script begins by loading GNN-specific settings from `config.yml` under the `gnn_settings` key. This includes file paths, learning parameters (learning rate, batch size, epochs), model architecture details (hidden channels), and the `gnn_target_index`.
+    *   It determines the device for training (CUDA if available, otherwise CPU).
+
+2.  **Data Loading and Batching**:
+    *   The preprocessed training (`train_graphs.pt`) and validation (`val_graphs.pt`) datasets are loaded from the `data/` directory. These files contain lists of `torch_geometric.data.Data` objects.
+    *   `torch_geometric.loader.DataLoader` instances are created for both training and validation sets. The `DataLoader` handles batching of graph data, which is crucial for managing memory and providing stochasticity to the training. It combines multiple `Data` objects into a single `Batch` object for efficient processing.
+
+3.  **Model Initialization**:
+    *   The `OracleNetGNN` model (from `models/gnn_oracle_net.py`) is instantiated. The number of input node features for the model is dynamically determined from the loaded dataset.
+    *   The model is then moved to the selected compute device.
+
+4.  **Optimizer and Loss Function**:
+    *   An **Adam optimizer** (`torch.optim.Adam`) is used to update the model's weights during training. The learning rate is configurable.
+    *   **Mean SquaredError (MSE) loss** (`torch.nn.MSELoss`) is employed as the loss function, suitable for regression tasks where the goal is to predict a continuous numerical property.
+
+5.  **Target Property Selection**:
+    *   The `Data` objects might store multiple target properties in their `y` attribute (e.g., `data.y = torch.tensor([[band_gap, formation_energy]])`).
+    *   The `gnn_target_index` parameter from `config.yml` (e.g., `0` for band gap, `1` for formation energy) is used to select which specific property the GNN model will be trained to predict. The target tensor is sliced and reshaped accordingly.
+
+6.  **Training Loop**:
+    *   The script iterates for a configured number of `epochs`.
+    *   **Training Phase (per epoch)**:
+        *   The model is set to `train()` mode (enabling dropout, etc.).
+        *   It iterates through batches provided by the training `DataLoader`.
+        *   For each batch:
+            *   The optimizer's gradients are zeroed (`optimizer.zero_grad()`).
+            *   A forward pass is performed: the batch of graph data is fed through the `OracleNetGNN` model to get predictions.
+            *   The MSE loss is calculated between the model's predictions and the true target values for the batch.
+            *   A backward pass is performed (`loss.backward()`), computing gradients of the loss with respect to model parameters.
+            *   The optimizer updates the model's parameters (`optimizer.step()`).
+        *   The average training loss for the epoch is calculated and logged.
+    *   **Validation Phase (per epoch)**:
+        *   The model is set to `eval()` mode (disabling dropout, etc.).
+        *   With gradient calculations disabled (`torch.no_grad()`), it iterates through batches from the validation `DataLoader`.
+        *   For each validation batch, predictions are made, and the loss is calculated.
+        *   The average validation loss for the epoch is calculated and logged.
+
+7.  **Model Saving**:
+    *   The script keeps track of the best average validation loss observed so far.
+    *   If the validation loss for the current epoch is lower than the previous best, the model's current state (`model.state_dict()`) is saved to the path specified by `gnn_model_save_path` in `config.yml` (e.g., `data/oracle_net_gnn.pth`).
+    *   This ensures that the saved model is the one that performed best on the unseen validation data.
+
+Upon completion, the script will have saved the weights of the GNN model that achieved the lowest loss on the validation set, ready for evaluation.
 
 ### Evaluating the GNN Model
 

@@ -148,29 +148,128 @@ A estratégia de aquisição de dados baseia-se em papéis específicos para cad
 
 Este projeto inclui o OracleNet, um modelo de Rede Neural de Grafos (GNN) projetado para prever propriedades de materiais. O GNN utiliza estruturas de materiais representadas como grafos (onde os nós são átomos e as arestas são ligações/conexões) e aprende a prever propriedades alvo.
 
+#### Arquitetura do Modelo
+
+O `OracleNetGNN` (definido em `models/gnn_oracle_net.py`) é uma Rede Neural Convolucional de Grafos (GCN) construída usando PyTorch Geometric. Sua arquitetura é projetada para processar dados de materiais baseados em grafos e prever uma única propriedade numérica.
+
+Os componentes chave são:
+
+*   **Camada de Entrada**: O modelo espera objetos de dados de grafo de `torch_geometric.data.Data`. Cada objeto deve conter:
+    *   `x`: Matriz de características dos nós com forma `[num_nodes, num_node_features]`. Tipicamente, `num_node_features` é 2, representando o número atômico e a eletronegatividade de Pauling.
+    *   `edge_index`: Conectividade do grafo em formato COO, com forma `[2, num_edges]`, tipo `torch.long`.
+    *   `edge_attr`: Matriz de características das arestas, com forma `[num_edges, num_edge_features]`. Tipicamente, `num_edge_features` é 1, representando a distância interatômica. (Nota: As camadas `GCNConv` atuais usam estas como `edge_weight` se forem unidimensionais; caso contrário, podem ser ignoradas pela `GCNConv` padrão se não tratadas explicitamente).
+    *   `batch`: Um vetor que atribui cada nó ao seu respectivo grafo em um lote, com forma `[num_nodes]`, tipo `torch.long`.
+
+*   **Camadas Convolucionais de Grafo**:
+    *   O modelo emprega duas camadas `GCNConv` do PyTorch Geometric.
+    *   A primeira camada `GCNConv` mapeia as características de entrada dos nós para um espaço de maior dimensão (`hidden_channels`).
+    *   A segunda camada `GCNConv` processa adicionalmente esses embeddings.
+    *   Cada camada `GCNConv` é seguida por uma função de ativação `ReLU` para introduzir não linearidade.
+    *   Se os atributos das arestas (`edge_attr`) forem unidimensionais (e.g., distâncias escalares), eles podem ser passados como `edge_weight` para as camadas `GCNConv`, influenciando a passagem de mensagens.
+
+*   **Pooling Global**:
+    *   Após as camadas convolucionais, uma operação `global_mean_pool` é aplicada. Isso agrega todos os embeddings de nós dentro de cada grafo em um lote em um único vetor de embedding em nível de grafo de tamanho `hidden_channels`. Isso permite que o modelo lide com grafos de tamanhos variados.
+
+*   **Camada de Saída**:
+    *   Uma camada de dropout (`F.dropout`) é aplicada ao embedding em nível de grafo para regularização durante o treinamento.
+    *   Finalmente, uma camada linear (`torch.nn.Linear`) mapeia o embedding do grafo para um único valor de saída numérico, que é a propriedade do material prevista.
+
+O fluxo geral de dados é:
+`Lote de Grafos de Entrada -> GCNConv1 -> ReLU -> GCNConv2 -> ReLU -> Pooling Médio Global -> Dropout -> Camada Linear de Saída -> Valor(es) Previsto(s)`
+
 ### Preparação de Dados para o GNN
 
-Antes de treinar o GNN, os dados do grafo precisam ser preparados:
-- Dados brutos de materiais (e.g., do Materials Project ou OQMD contendo strings CIF e propriedades alvo) são processados em estruturas de grafo.
-- O script `scripts/prepare_gnn_data.py` lida com essa conversão. Ele recebe dados brutos (e.g., `mp_raw_data.json`), converte estruturas em grafos usando `pymatgen` e `torch_geometric`, e salva os conjuntos de dados (`train_graphs.pt`, `val_graphs.pt`, `test_graphs.pt`) no diretório `data/`.
-  - As características dos nós (node features) tipicamente incluem número atômico e eletronegatividade.
-  - As características das arestas (edge features) podem incluir distâncias interatômicas.
-  - As propriedades alvo (e.g., gap de banda, energia de formação) são armazenadas com cada grafo.
+O desempenho eficaz de uma GNN depende de dados de grafo bem estruturados. O processo de preparação envolve a conversão de informações brutas de materiais (tipicamente dados cristalográficos e propriedades alvo) em representações de grafo adequadas para `torch_geometric`.
+
+1.  **Entrada de Dados Brutos**:
+    *   O processo começa com dados brutos de materiais, frequentemente obtidos de bancos de dados como o Materials Project ou OQMD. Espera-se que esses dados estejam tipicamente em formato JSON (e.g., `data/mp_raw_data.json` conforme configurado em `config.yml`).
+    *   Cada entrada de material no arquivo JSON deve idealmente conter uma string CIF (Crystallographic Information File) e as propriedades alvo a serem previstas (e.g., gap de banda, energia de formação).
+
+2.  **Conversão de Estrutura para Grafo (`utils/graph_utils.py`)**:
+    *   O núcleo da conversão de grafo é tratado pela função `structure_to_graph` dentro de `utils/graph_utils.py`.
+    *   Esta função recebe como entrada um objeto `pymatgen.core.structure.Structure` (analisado a partir da string CIF).
+    *   **Extração de Características dos Nós**: Para cada átomo (sítio) na estrutura, ela extrai:
+        *   `atomic_number`: O número atômico do elemento (e.g., Si é 14).
+        *   `electronegativity`: A eletronegatividade de Pauling do elemento (e.g., Si é aprox. 1.90).
+        Estes são montados em um vetor de características de nó para cada átomo.
+    *   **Definição de Arestas e Extração de Características**:
+        *   As arestas são tipicamente definidas entre átomos que estão dentro de um certo raio de corte um do outro (e.g., 3.0 Angstroms, conforme definido em `structure_to_graph`).
+        *   Para cada par de átomos (aresta potencial), a `distance` (distância) interatômica real é calculada. Essa distância serve como a principal característica da aresta.
+        A conectividade do grafo (`edge_index`) e as características das arestas (`edge_attr`) são construídas com base nesses critérios.
+
+3.  **Criação do Conjunto de Dados de Grafos (`scripts/prepare_gnn_data.py`)**:
+    *   O script `scripts/prepare_gnn_data.py` orquestra todo o fluxo de trabalho de preparação de dados:
+        *   Ele carrega as entradas brutas de materiais do arquivo JSON especificado.
+        *   Para cada material, ele analisa a string CIF em um objeto `Structure` do `pymatgen`.
+        *   Em seguida, chama `structure_to_graph` para obter as características dos nós, o índice de arestas e as características das arestas.
+        *   Esses componentes são usados para construir objetos `torch_geometric.data.Data`. Cada objeto `Data` representa um único grafo de material e armazena:
+            *   `x`: Tensor de características dos nós (número atômico, eletronegatividade).
+            *   `edge_index`: Tensor que define a conectividade do grafo.
+            *   `edge_attr`: Tensor de características das arestas (distâncias).
+            *   `y`: Um tensor contendo a(s) propriedade(s) alvo. Por exemplo, se estiver prevendo gap de banda e energia de formação, `y` pode ser `torch.tensor([[valor_band_gap, valor_energia_formacao]])`. O alvo específico usado durante o treinamento é determinado por `gnn_target_index` no `config.yml`.
+            *   `material_id`: O identificador original do material para rastreamento.
+        *   O script processa todos os materiais, pula aqueles com erros (e.g., CIFs ausentes, incapacidade de analisar) e coleta todos os objetos `Data` válidos.
+    *   Finalmente, o script divide o conjunto de dados completo em conjuntos de treinamento, validação e teste com base nas proporções definidas em `config.yml` (e.g., 70% treino, 20% validação, 10% teste).
+    *   Esses conjuntos de dados divididos são salvos como arquivos tensores do PyTorch (`.pt`) no diretório `data/` (e.g., `train_graphs.pt`, `val_graphs.pt`, `test_graphs.pt`), prontos para serem carregados pelos scripts de treinamento e avaliação.
+
+Esta preparação detalhada garante que o GNN receba representações de grafo consistentes e significativas dos materiais.
 
 ### Treinando o Modelo GNN
 
-O modelo OracleNet GNN pode ser treinado usando o seguinte script:
+O OracleNet GNN é treinado usando o script `scripts/train_gnn_model.py`. Este script orquestra o carregamento de dados, a execução das épocas de treinamento, a validação do modelo e o salvamento da versão com melhor desempenho.
 
+**Execução:**
+Para iniciar o processo de treinamento, execute:
 ```bash
 python scripts/train_gnn_model.py
 ```
 
-- Este script carrega os dados de grafo pré-processados de `data/train_graphs.pt` e `data/val_graphs.pt`.
-- Ele instancia o modelo `OracleNetGNN` (uma arquitetura baseada em GCN definida em `models/gnn_oracle_net.py`).
-- O treinamento envolve a otimização do modelo para prever uma propriedade alvo (e.g., gap de banda, especificada por `gnn_target_index` na configuração).
-- O script usa um otimizador Adam e a perda de Erro Quadrático Médio (MSE).
-- O modelo com a menor perda de validação é salvo em `data/oracle_net_gnn.pth` (ou conforme configurado).
-- Hiperparâmetros chave de treinamento (taxa de aprendizado, tamanho do lote, épocas, canais ocultos, índice do alvo) podem ser configurados em `config.yml` na seção `gnn_settings`.
+**Passos Chave no Processo de Treinamento:**
+
+1.  **Configuração e Setup**:
+    *   O script começa carregando as configurações específicas do GNN de `config.yml` sob a chave `gnn_settings`. Isso inclui caminhos de arquivo, parâmetros de aprendizado (taxa de aprendizado, tamanho do lote, épocas), detalhes da arquitetura do modelo (canais ocultos) e o `gnn_target_index`.
+    *   Ele determina o dispositivo para o treinamento (CUDA se disponível, caso contrário CPU).
+
+2.  **Carregamento de Dados e Batching (Divisão em Lotes)**:
+    *   Os conjuntos de dados pré-processados de treinamento (`train_graphs.pt`) e validação (`val_graphs.pt`) são carregados do diretório `data/`. Esses arquivos contêm listas de objetos `torch_geometric.data.Data`.
+    *   Instâncias de `torch_geometric.loader.DataLoader` são criadas para os conjuntos de treinamento e validação. O `DataLoader` lida com a divisão dos dados de grafo em lotes, o que é crucial para gerenciar a memória e fornecer estocasticidade ao treinamento. Ele combina múltiplos objetos `Data` em um único objeto `Batch` para processamento eficiente.
+
+3.  **Inicialização do Modelo**:
+    *   O modelo `OracleNetGNN` (de `models/gnn_oracle_net.py`) é instanciado. O número de características de nó de entrada para o modelo é determinado dinamicamente a partir do conjunto de dados carregado.
+    *   O modelo é então movido para o dispositivo de computação selecionado.
+
+4.  **Otimizador e Função de Perda (Loss Function)**:
+    *   Um **otimizador Adam** (`torch.optim.Adam`) é usado para atualizar os pesos do modelo durante o treinamento. A taxa de aprendizado é configurável.
+    *   A **perda de Erro Quadrático Médio (MSE)** (`torch.nn.MSELoss`) é empregada como a função de perda, adequada para tarefas de regressão onde o objetivo é prever uma propriedade numérica contínua.
+
+5.  **Seleção da Propriedade Alvo**:
+    *   Os objetos `Data` podem armazenar múltiplas propriedades alvo em seu atributo `y` (e.g., `data.y = torch.tensor([[band_gap, formation_energy]])`).
+    *   O parâmetro `gnn_target_index` de `config.yml` (e.g., `0` para gap de banda, `1` para energia de formação) é usado para selecionar qual propriedade específica o modelo GNN será treinado para prever. O tensor alvo é fatiado e remodelado conforme necessário.
+
+6.  **Loop de Treinamento**:
+    *   O script itera por um número configurado de `epochs` (épocas).
+    *   **Fase de Treinamento (por época)**:
+        *   O modelo é definido para o modo `train()` (habilitando dropout, etc.).
+        *   Ele itera através dos lotes fornecidos pelo `DataLoader` de treinamento.
+        *   Para cada lote:
+            *   Os gradientes do otimizador são zerados (`optimizer.zero_grad()`).
+            *   Uma passagem direta (forward pass) é realizada: o lote de dados de grafo é alimentado através do modelo `OracleNetGNN` para obter predições.
+            *   A perda MSE é calculada entre as predições do modelo e os valores alvo verdadeiros para o lote.
+            *   Uma passagem reversa (backward pass) é realizada (`loss.backward()`), computando os gradientes da perda em relação aos parâmetros do modelo.
+            *   O otimizador atualiza os parâmetros do modelo (`optimizer.step()`).
+        *   A perda média de treinamento para a época é calculada e registrada.
+    *   **Fase de Validação (por época)**:
+        *   O modelo é definido para o modo `eval()` (desabilitando dropout, etc.).
+        *   Com os cálculos de gradiente desabilitados (`torch.no_grad()`), ele itera através dos lotes do `DataLoader` de validação.
+        *   Para cada lote de validação, predições são feitas e a perda é calculada.
+        *   A perda média de validação para a época é calculada e registrada.
+
+7.  **Salvamento do Modelo**:
+    *   O script mantém o registro da melhor perda média de validação observada até o momento.
+    *   Se a perda de validação da época atual for menor que a melhor anterior, o estado atual do modelo (`model.state_dict()`) é salvo no caminho especificado por `gnn_model_save_path` em `config.yml` (e.g., `data/oracle_net_gnn.pth`).
+    *   Isso garante que o modelo salvo seja aquele que teve o melhor desempenho nos dados de validação não vistos.
+
+Ao concluir, o script terá salvo os pesos do modelo GNN que alcançou a menor perda no conjunto de validação, pronto para avaliação.
 
 ### Avaliando o Modelo GNN
 
