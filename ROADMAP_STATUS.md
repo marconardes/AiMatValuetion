@@ -1,5 +1,21 @@
 # AI Superconductor Discovery Roadmap: A 20-Step Plan
 
+## Core Technology Stack
+
+This project utilizes the following core technologies:
+
+*   **Language**: Python 3.10+
+*   **Machine Learning**:
+    *   PyTorch (`torch`): Core deep learning framework. (Installed)
+    *   PyTorch Geometric (PyG) (`torch_geometric`): Library for deep learning on graphs. (Installed)
+*   **Chemistry/Materials Science**:
+    *   RDKit (`rdkit-pypi`): Toolkit for cheminformatics. (Installed)
+    *   Pymatgen (`pymatgen`): Library for materials analysis. (Installed)
+*   **Experiment Management (Planned)**:
+    *   Weights & Biases (W&B) or MLflow. (To be integrated)
+*   **Data Version Control (Planned)**:
+    *   DVC (Data Version Control). (To be integrated)
+
 **Legend:**
 - `[x]` Implemented
 - `[~]` Partially Implemented or Basic Version Exists

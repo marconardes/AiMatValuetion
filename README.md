@@ -131,3 +131,19 @@ The data acquisition strategy relies on specific roles for each data source:
 *   **SuperCon**: This dataset is the primary source for the target variable, which is the critical temperature (Tc) of superconducting materials.
 *   **OQMD (Open Quantum Materials Database)**: OQMD is used to obtain complementary material properties (e.g., formation energy, band gap, crystal structure) for compositions identified in the SuperCon dataset. It also serves as a broader database for sourcing material properties and crystal structures for general analysis and model training.
 *   **Materials Project (MP)**: The Materials Project API is an *optional* source for acquiring complementary material properties and crystal structures. It can be used similarly to OQMD to enrich the dataset or as an alternative source for such information.
+
+## Technology Stack
+
+This project leverages the following core technologies:
+
+*   **Language**: Python 3.10+
+*   **Machine Learning**:
+    *   PyTorch (`torch`): Core deep learning framework.
+    *   PyTorch Geometric (PyG) (`torch_geometric`): Library for deep learning on graphs and other irregular structures.
+*   **Chemistry/Materials Science**:
+    *   RDKit (`rdkit-pypi`): Toolkit for cheminformatics.
+    *   Pymatgen (`pymatgen`): Python Materials Genomics library for materials analysis, including CIF and structure manipulation.
+*   **Experiment Management (Planned)**:
+    *   Weights & Biases (W&B) or MLflow: For tracking experiments, models, and datasets. (Not yet integrated)
+*   **Data Version Control (Planned)**:
+    *   DVC (Data Version Control): For managing large data files and ML models alongside Git. (Not yet integrated)

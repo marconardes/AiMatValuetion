@@ -1,5 +1,21 @@
 # Roadmap para Descoberta de Supercondutores com IA: Um Plano de 20 Passos
 
+## Pilha Tecnológica Principal (Core Stack)
+
+Este projeto utiliza as seguintes tecnologias principais:
+
+*   **Linguagem**: Python 3.10+
+*   **Aprendizado de Máquina (Machine Learning)**:
+    *   PyTorch (`torch`): Framework principal de deep learning. (Instalado)
+    *   PyTorch Geometric (PyG) (`torch_geometric`): Biblioteca para deep learning em grafos. (Instalado)
+*   **Química/Ciência dos Materiais**:
+    *   RDKit (`rdkit-pypi`): Toolkit para quimioinformática. (Instalado)
+    *   Pymatgen (`pymatgen`): Biblioteca para análise de materiais. (Instalado)
+*   **Gerenciamento de Experimentos (Planejado)**:
+    *   Weights & Biases (W&B) ou MLflow. (A ser integrado)
+*   **Controle de Versão de Dados (Planejado)**:
+    *   DVC (Data Version Control). (A ser integrado)
+
 **Legenda:**
 - `[x]` Implementado
 - `[~]` Parcialmente Implementado ou Versão Básica Existente
