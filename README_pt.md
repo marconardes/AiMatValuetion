@@ -131,3 +131,19 @@ A estratégia de aquisição de dados baseia-se em papéis específicos para cad
 *   **SuperCon**: Este conjunto de dados é a fonte primária para a variável alvo, que é a temperatura crítica (Tc) dos materiais supercondutores.
 *   **OQMD (Open Quantum Materials Database)**: O OQMD é utilizado para obter propriedades complementares dos materiais (ex.: energia de formação, band gap, estrutura cristalina) para composições identificadas no conjunto de dados SuperCon. Serve também como uma base de dados mais ampla para obter propriedades de materiais e estruturas cristalinas para análise geral e treino de modelos.
 *   **Materials Project (MP)**: A API do Materials Project é uma fonte *opcional* para adquirir propriedades complementares de materiais e estruturas cristalinas. Pode ser usada de forma semelhante ao OQMD para enriquecer o conjunto de dados ou como uma fonte alternativa para tais informações.
+
+## Pilha Tecnológica (Stack)
+
+Este projeto utiliza as seguintes tecnologias principais:
+
+*   **Linguagem**: Python 3.10+
+*   **Aprendizado de Máquina (Machine Learning)**:
+    *   PyTorch (`torch`): Framework principal de deep learning.
+    *   PyTorch Geometric (PyG) (`torch_geometric`): Biblioteca para deep learning em grafos e outras estruturas irregulares.
+*   **Química/Ciência dos Materiais**:
+    *   RDKit (`rdkit-pypi`): Toolkit para quimioinformática.
+    *   Pymatgen (`pymatgen`): Biblioteca Python para genômica de materiais, utilizada para análise de materiais, incluindo manipulação de CIFs e estruturas.
+*   **Gerenciamento de Experimentos (Planejado)**:
+    *   Weights & Biases (W&B) ou MLflow: Para rastrear experimentos, modelos e conjuntos de dados. (Ainda não integrado)
+*   **Controle de Versão de Dados (Planejado)**:
+    *   DVC (Data Version Control): Para gerenciar arquivos de dados grandes e modelos de ML em conjunto com o Git. (Ainda não integrado)

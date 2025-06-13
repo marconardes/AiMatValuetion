@@ -1,5 +1,21 @@
 # Roadmap para Descoberta de Supercondutores com IA: Um Plano de 20 Passos
 
+## Pilha Tecnológica Principal (Core Stack)
+
+Este projeto utiliza as seguintes tecnologias principais:
+
+*   **Linguagem**: Python 3.10+
+*   **Aprendizado de Máquina (Machine Learning)**:
+    *   PyTorch (`torch`): Framework principal de deep learning. (Instalado)
+    *   PyTorch Geometric (PyG) (`torch_geometric`): Biblioteca para deep learning em grafos. (Instalado)
+*   **Química/Ciência dos Materiais**:
+    *   RDKit (`rdkit-pypi`): Toolkit para quimioinformática. (Instalado)
+    *   Pymatgen (`pymatgen`): Biblioteca para análise de materiais. (Instalado)
+*   **Gerenciamento de Experimentos (Planejado)**:
+    *   Weights & Biases (W&B) ou MLflow. (A ser integrado)
+*   **Controle de Versão de Dados (Planejado)**:
+    *   DVC (Data Version Control). (A ser integrado)
+
 **Legenda:**
 - `[x]` Implementado
 - `[~]` Parcialmente Implementado ou Versão Básica Existente
@@ -66,36 +82,46 @@ Com os dados prontos, construímos a ferramenta que irá guiar nosso gerador.
     - `[ ]` Analisar onde o OracleNet mais erra. Ele tem dificuldade com alguma família específica de materiais? (I)
     - `[ ]` Usar técnicas de explicabilidade (XAI para GNNs) para entender quais subestruturas o modelo considera importantes para a supercondutividade. (A)
 
-## Fase III: ✨ Desenvolvimento do Modelo Gerativo "Creator" (Prioridades 11-16)
+## Fase III (Revisada): ✨ Desenvolvimento do Modelo Gerativo "Creator" com VAE + LNN (Prioridades 11-16)
 
-Agora, a parte mais inovadora: criar novos materiais.
+Objetivo: Criar um sistema que gera materiais quimicamente válidos e fisicamente estáveis (usando LNN), otimizados para alta Tc (usando VAE e OracleNet).
 
-- `[ ]` **(Prioridade 11/20) Design da Arquitetura GAN para Grafos:** (A)
-    - `[ ]` Projetar as duas redes principais: (A)
-        - `[ ]` Gerador: Uma GNN que recebe ruído e gera um novo grafo de material. (A)
-        - `[ ]` Discriminador: Uma GNN que recebe um grafo e o classifica como real ou falso. (A)
+- `[ ]` **(Prioridade 11/20) Design da Arquitetura Híbrida (VAE + LNN):**
+    - `[ ]` Projetar a arquitetura gerativa principal (baseada no VAE):
+        - `[ ]` Encoder (GNN): Comprime um grafo de material em um vetor no espaço latente.
+        - `[ ]` Decoder (GNN): Gera um novo grafo de material a partir de um vetor do espaço latente.
+    - `[ ]` Projetar a rede de validação física:
+        - `[ ]` Lagrangian Neural Network (LNN): Uma rede treinada para aprender uma aproximação da energia potencial de uma configuração atômica. Ela receberá um grafo gerado e avaliará sua estabilidade energética.
 
-- `[ ]` **(Prioridade 12/20) Implementação da Função de Perda (Loss) Composta:** (A)
-    - `[ ]` Esta é a lógica central. A função de perda do Gerador será uma soma ponderada de: (A)
-        - `[ ]` Perda Adversária: Quão bem ele engana o Discriminador. (A)
-        - `[ ]` Perda Preditiva: Quão alta é a Tc prevista pelo OracleNet para o material gerado (o objetivo é maximizar isso). (A)
-        - `[ ]` (Opcional) Termos de regularização para garantir validade química. (I)
+- `[ ]` **(Prioridade 12/20) Implementação da Função de Perda (Loss) Composta Avançada:**
+    - `[ ]` Esta é a lógica que conecta geração, otimização de propriedade e realismo físico. A perda do VAE será uma soma ponderada de:
+        - `[ ]` Perda de Reconstrução: Quão bem o VAE reconstrói os dados de entrada.
+        - `[ ]` Perda de Divergência KL: Regularização padrão do espaço latente do VAE.
+        - `[ ]` Perda Preditiva (OracleNet): Incentiva a geração de materiais com alta Tc prevista pelo OracleNet.
+        - `[ ]` Perda de Estabilidade Física (LNN): Penaliza o gerador por criar estruturas que a LNN classifica como tendo alta energia (sendo instáveis ou fisicamente implausíveis). Este é o elo crucial com a LNN.
 
-- `[ ]` **(Prioridade 13/20) Implementação do Loop de Treinamento da GAN:** (A)
-    - `[ ]` Escrever o script que alterna entre o treinamento do Discriminador (com dados reais e falsos) e o do Gerador (usando a loss composta). Este ciclo é mais complexo que o da Fase II. (A)
+- `[ ]` **(Prioridade 13/20) Implementação do Loop de Treinamento Híbrido:**
+    - `[ ]` Escrever o script que treina o sistema VAE. O treinamento da LNN pode ser feito separadamente com dados de simulações (ex: DFT) ou em conjunto.
+    - `[ ]` No loop de treinamento principal do VAE:
+        - `[ ]` Gerar um grafo "falso" com o Decoder.
+        - `[ ]` Passar o grafo pelo OracleNet para obter a perda preditiva.
+        - `[ ]` Passar o mesmo grafo pela LNN pré-treinada para obter a perda de estabilidade.
+        - `[ ]` Calcular a perda composta e atualizar os pesos do VAE.
 
-- `[ ]` **(Prioridade 14/20) Treinamento do Sistema GAN Completo:** (A)
-    - `[ ]` Executar o treinamento da GAN. Este passo é computacionalmente intensivo e pode exigir GPUs potentes. (A)
-    - `[ ]` Monitorar as perdas do Gerador e do Discriminador para garantir que o treinamento está estável. (I)
+- `[ ]` **(Prioridade 14/20) Treinamento dos Modelos:**
+    - `[ ]` 1. Treinar a LNN: Treinar a rede para prever a energia de configurações atômicas a partir de um banco de dados de materiais conhecidos e suas energias calculadas.
+    - `[ ]` 2. Treinar o Sistema VAE: Executar o treinamento do VAE usando a função de perda composta, que agora inclui o feedback da LNN já treinada. Monitorar todas as componentes da perda.
 
-- `[ ]` **(Prioridade 15/20) Geração do Lote Inicial de Candidatos:** (I)
-    - `[ ]` Usar o Gerador treinado para criar um grande número (milhares) de novas estruturas moleculares que não existem na base de dados. (I)
+- `[ ]` **(Prioridade 15/20) Geração do Lote de Candidatos Fisicamente Válidos:**
+    - `[ ]` Usar o Decoder do VAE treinado para gerar milhares de novas estruturas.
+    - `[ ]` Por construção, essas estruturas já foram otimizadas durante o treino para serem candidatas a terem alta Tc e estabilidade física.
 
-- `[ ]` **(Prioridade 16/20) Filtragem e Ranqueamento dos Candidatos Gerados:** (I)
-    - `[ ]` Criar um pipeline para avaliar os candidatos gerados: (I)
-        - `[ ]` Verificar validade química básica. (B)
-        - `[ ]` Executar o OracleNet para prever a Tc de cada um. (I)
-        - `[ ]` Ranquer os candidatos da Tc mais alta para a mais baixa. (B)
+- `[ ]` **(Prioridade 16/20) Filtragem e Ranqueamento Avançado dos Candidatos:**
+    - `[ ]` Criar um pipeline final de avaliação, agora mais robusto:
+        - `[ ]` Verificação final de validade química.
+        - `[ ]` Re-executar a LNN para obter uma pontuação de estabilidade energética precisa para cada candidato finalista.
+        - `[ ]` Executar o OracleNet para prever a Tc de cada um.
+        - `[ ]` Ranquear os candidatos usando um critério combinado: maior Tc prevista E menor energia (maior estabilidade).
 
 ## Fase IV: 🧪 Validação e Fechamento do Ciclo (Prioridades 17-20)
 
