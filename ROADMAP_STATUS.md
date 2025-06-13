@@ -14,20 +14,21 @@ This plan transforms strategic phases into an actionable workflow, with clear pr
 The project's success hinges entirely on the quality and organization of your data.
 
 - `[~]` **(Priority 1/20) Development Environment Setup:**
-    - `[x]` Set up a code repository (Git).
-    - `[~]` Install essential AI libraries (PyTorch, TensorFlow).
-    - `[~]` Install AI libraries for graphs (PyTorch Geometric or DGL).
-    - `[x]` Install chemistry/materials libraries (Pymatgen, RDKit).
+    - `[x]` Set up a code repository (Git). (B)
+    - `[~]` Install essential AI libraries (PyTorch, TensorFlow). (B)
+    - `[~]` Install AI libraries for graphs (PyTorch Geometric or DGL). (B)
+    - `[x]` Install chemistry/materials libraries (Pymatgen, RDKit). (B)
 
 - `[~]` **(Priority 2/20) Identification and Access to Data Sources:**
-    - `[~]` Access Materials Project (API), SuperCon (local files), OQMD (API identified); ICSD pending.
-    - `[~]` Define search criteria (SuperCon for Tc, OQMD/MP for properties).
+    - `[~]` Access Materials Project (API), SuperCon (local files), OQMD (API identified); ICSD pending. (I)
+    - `[~]` Define search criteria (SuperCon for Tc, OQMD/MP for properties). (B)
 
 - `[~]` **(Priority 3/20) Development of Data Extraction Scripts:**
-    - `[x]` Scripts for Materials Project data extraction exist.
-    - `[x]` Develop script to process local SuperCon dataset (`raw.tsv`) for compositions and Tc.
-    - `[x]` Develop script to fetch complementary data from OQMD API for SuperCon compositions.
-    - `[x]` Store raw data in an organized format (e.g., local database or data lake).
+    - `[x]` Scripts for Materials Project data extraction exist. (I)
+    - `[x]` Develop script to process local SuperCon dataset (`raw.tsv`) for compositions and Tc. (I)
+    - `[x]` Develop script to fetch complementary data from OQMD API for SuperCon compositions. (I)
+    - `[x]` Process fetched OQMD data (`oqmd_data_raw.json`) to select/filter entries and extract features. (I)
+    - `[x]` Store raw data in an organized format (e.g., local database or data lake). (B)
 
 - `[~]` **(Priority 4/20) Data Cleaning and Normalization:**
     - `[~]` Validate extracted data, handling missing values and inconsistencies.
