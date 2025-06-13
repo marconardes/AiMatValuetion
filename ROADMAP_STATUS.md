@@ -30,9 +30,9 @@ The project's success hinges entirely on the quality and organization of your da
     - `[x]` Process fetched OQMD data (`oqmd_data_raw.json`) to select/filter entries and extract features. (I)
     - `[x]` Store raw data in an organized format (e.g., local database or data lake). (B)
 
-- `[~]` **(Priority 4/20) Data Cleaning and Normalization:** (I)
-    - `[~]` Validate extracted data, handling missing values and inconsistencies. (I)
-    - `[~]` Unify units and formats. For example, ensure all crystal structures are in a standard format like CIF files. (I)
+- `[x]` **(Priority 4/20) Data Cleaning and Normalization:** (I)
+    - `[x]` Validate extracted data, handling missing values and inconsistencies. (I)
+    - `[x]` Unify units and formats. For example, ensure all crystal structures are in a standard format like CIF files. (I)
 
 - `[x]` **(Priority 5/20) Definition and Implementation of Graph Representation:** (A)
     - `[x]` Formally define how a crystal structure will be converted into a graph. (A)

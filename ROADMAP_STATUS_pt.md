@@ -30,9 +30,9 @@ O sucesso do projeto depende inteiramente da qualidade e da organização dos se
     - `[x]` Processar dados OQMD buscados (`oqmd_data_raw.json`) para selecionar/filtrar entradas e extrair features. (I)
     - `[x]` Armazenar os dados brutos em um formato organizado (ex: banco de dados local ou data lake). (B)
 
-- `[~]` **(Prioridade 4/20) Limpeza e Normalização dos Dados:** (I)
-    - `[~]` Validar os dados extraídos, tratando valores faltantes e inconsistências. (I)
-    - `[~]` Unificar unidades e formatos. Por exemplo, garantir que todas as estruturas cristalinas estejam em um formato padrão como arquivos CIF. (I)
+- `[x]` **(Prioridade 4/20) Limpeza e Normalização dos Dados:** (I)
+    - `[x]` Validar os dados extraídos, tratando valores faltantes e inconsistências. (I)
+    - `[x]` Unificar unidades e formatos. Por exemplo, garantir que todas as estruturas cristalinas estejam em um formato padrão como arquivos CIF. (I)
 
 - `[x]` **(Prioridade 5/20) Definição e Implementação da Representação em Grafo:** (A)
     - `[x]` Definir formalmente como uma estrutura cristalina será convertida em um grafo. (A)
