@@ -13,6 +13,7 @@ This project is a Tkinter GUI application designed as a prototype for predicting
 The project is structured into several key components:
 *   **Data Acquisition Scripts (`fetch_mp_data.py`, `process_raw_data.py`):** These scripts handle the creation and preparation of the dataset from external sources like the Materials Project.
 *   **Model Training Script (`train_model.py`):** This script is responsible for training machine learning models using the processed dataset.
+*   **Graph Dataset Preparation Script (`prepare_gnn_data.py`):** This script processes raw material data (e.g., from CIF strings in the JSON output of `fetch_mp_data.py`) into graph representations suitable for Graph Neural Networks (GNNs). It converts structures to `torch_geometric.data.Data` objects, saves the full processed graph dataset, and splits it into training, validation, and test sets. This is essential for GNN-based model development.
 *   **GUI Application (`material_predictor_gui.py`):** Provides the main user interface for interacting with the prediction models and managing data.
 *   **Configuration File (`config.yml`):** A central YAML file for managing all important operational settings, file paths, API keys, and model parameters. This improves maintainability by separating settings from code, making it easier for users to adapt the project to their needs or different environments without altering Python scripts.
 *   **Utilities (`utils/`):** This directory contains shared Python modules:
@@ -33,6 +34,10 @@ The general workflow involves:
     *   **`process_raw_data.py`**: This script processes the raw JSON data file.
         *   It uses `pymatgen` to parse CIF strings and extract structural features.
         *   It combines these with API-sourced data and saves the result to `Fe_materials_dataset.csv`.
+    *   **`prepare_gnn_data.py` (For GNN Models):** This script takes the raw data (e.g., `mp_raw_data.json`) and converts it into graph datasets.
+        *   It processes materials into `torch_geometric.data.Data` objects.
+        *   Saves the full dataset and pre-split train/validation/test sets as `.pt` files.
+        *   Configuration for this script (input/output paths, split ratios) is managed in `config.yml` under the `prepare_gnn_data` section.
     *   **Placeholder Dataset**: A placeholder `Fe_materials_dataset.csv` is included in the repository. This allows the GUI and model training script to run for demonstration purposes even if you don't immediately fetch or process fresh data. The filenames for input and output are configurable via `config.yml`.
 
 3.  **Model Training (`train_model.py`):**
@@ -90,6 +95,7 @@ The general workflow involves:
         1.  **Ensure API Key is set in `config.yml`**. (Fallback to `MP_API_KEY` environment variable is also possible if `mp_api_key` in `config.yml` is placeholder or missing).
         2.  Run data fetching: `python fetch_mp_data.py` (uses settings from `config.yml`)
         3.  Process raw data: `python process_raw_data.py` (uses settings from `config.yml`)
+        3b. Prepare GNN dataset (if using GNN models): `python prepare_gnn_data.py` (uses settings from `config.yml`)
         4.  Train models: `python train_model.py` (uses settings from `config.yml`)
         5.  Run the GUI: `python material_predictor_gui.py` (loads models and datasets as per `config.yml`)
 
@@ -102,6 +108,12 @@ Project settings are managed centrally in the `config.yml` file located in the r
 *   `fetch_data`: Parameters for `fetch_mp_data.py`, such as `max_total_materials` to fetch, `output_filename` for the raw JSON data, and `criteria_sets` to define the search criteria on Materials Project (e.g., number of elements, specific elements like 'Fe'). A special value of `-5` for `max_total_materials` will instruct the script to attempt to fetch all materials matching the combined criteria from the initial API query, ignoring individual `limit_per_set` and the overall `max_total_materials` cap.
 *   `process_data`: Settings for `process_raw_data.py`, including `raw_data_filename` (input) and `output_filename` for the processed CSV dataset.
 *   `train_model`: Configuration for `train_model.py`, such as the `dataset_filename` (input CSV), `test_size` for train-test split, `random_state` for reproducibility, `n_estimators` for Random Forest models, and paths for saving trained `models` and `preprocessors`.
+*   `prepare_gnn_data`: Settings for `prepare_gnn_data.py`.
+    *   `raw_data_filename`: Input JSON file containing raw material data (e.g., `mp_raw_data.json`).
+    *   `processed_graphs_filename`: Output path for the file containing the full list of processed `torch_geometric.data.Data` objects (e.g., `data/processed/processed_graphs.pt`).
+    *   `train_graphs_filename`, `val_graphs_filename`, `test_graphs_filename`: Output paths for the split datasets (training, validation, and test graph objects).
+    *   `random_seed`: Integer seed for reproducible dataset splitting.
+    *   `train_ratio`, `val_ratio`, `test_ratio`: Floating point values for dataset split proportions (e.g., 0.7, 0.2, 0.1).
 *   `gui`: Settings for `material_predictor_gui.py`, like the application `title`, window `geometry`, paths to `models_to_load`, and the `manual_entry_csv_filename` for saving manually entered data.
 
 **Important:** Before running `fetch_mp_data.py` for the first time, you **must** update the `mp_api_key` field in `config.yml` with your personal Materials Project API key. If this key is not found or is set to the placeholder `"YOUR_MP_API_KEY"` in `config.yml`, the system will then check for the `MP_API_KEY` environment variable as a fallback.
