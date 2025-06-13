@@ -4,6 +4,7 @@ import warnings
 import os # For checking file existence
 from utils.config_loader import load_config
 from utils.schema import DATA_SCHEMA # Added
+from utils.graph_utils import structure_to_graph # Added for graph processing
 
 from pymatgen.core.structure import Structure
 from pymatgen.electronic_structure.dos import Dos # To reconstruct DOS objects
@@ -65,17 +66,34 @@ def process_data():
                 processed_doc['lattice_gamma_pg'] = lat.gamma
                 processed_doc['num_sites_pg'] = struct.num_sites
 
+                # --- Graph Feature Extraction ---
+                graph_data = structure_to_graph(struct)
+                processed_doc['graph_nodes'] = graph_data['nodes']
+                processed_doc['graph_edges'] = graph_data['edges']
+                processed_doc['num_graph_nodes'] = graph_data['num_nodes']
+                processed_doc['num_graph_edges'] = graph_data['num_edges']
+
             except Exception as e:
                 warnings.warn(f"Pymatgen parsing/feature extraction failed for {material_id}: {e}")
                 # Fill relevant pymatgen features with None or N/A if parsing fails
                 pg_features = [k for k in DATA_SCHEMA if k.endswith('_pg') or k in ["formula_pretty", "num_elements", "elements"]]
                 for feat in pg_features:
                     processed_doc[feat] = None
+                # Also set graph features to None
+                processed_doc['graph_nodes'] = None
+                processed_doc['graph_edges'] = None
+                processed_doc['num_graph_nodes'] = None
+                processed_doc['num_graph_edges'] = None
         else:
             warnings.warn(f"CIF string missing for {material_id}.")
             pg_features = [k for k in DATA_SCHEMA if k.endswith('_pg') or k in ["formula_pretty", "num_elements", "elements"]]
             for feat in pg_features:
                 processed_doc[feat] = None
+            # Also set graph features to None if CIF string is missing
+            processed_doc['graph_nodes'] = None
+            processed_doc['graph_edges'] = None
+            processed_doc['num_graph_nodes'] = None
+            processed_doc['num_graph_edges'] = None
 
         # --- Process MP Features and DOS ---
         band_gap_mp = raw_material_doc.get('band_gap_mp')
@@ -119,7 +137,7 @@ def process_data():
 
     # --- Write to CSV ---
     # Define CSV fieldnames - ensure order and exclude non-CSV fields
-    csv_fieldnames = [key for key in DATA_SCHEMA.keys() if key not in ['cif_string', 'dos_object_mp']]
+    csv_fieldnames = [key for key in DATA_SCHEMA.keys() if key not in ['cif_string', 'dos_object_mp', 'graph_nodes', 'graph_edges']]
 
     # Ensure all keys in processed_doc are in csv_fieldnames, add if any are missing (e.g. due to dynamic keys)
     # However, it's better to strictly adhere to DATA_SCHEMA for CSV columns.
