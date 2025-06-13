@@ -29,9 +29,16 @@ class MockStructure:
         self.material_id = material_id
         self.formula = "FeMock" if "1" in material_id else "NiMock" # Vary formula for different materials
 
-        self.composition = MagicMock()
+        # self.composition = MagicMock()
+        # self.composition.reduced_formula = self.formula
+        # self.composition.elements = [MagicMock(symbol=self.formula.replace("Mock",""))]
+        mock_element_symbol = self.formula.replace("Mock","")
+        mock_el = MagicMock(name=f"MockElement_{mock_element_symbol}")
+        mock_el.symbol = mock_element_symbol # Ensure .symbol attribute returns a string
+
+        self.composition = MagicMock(name="MockComposition")
         self.composition.reduced_formula = self.formula
-        self.composition.elements = [MagicMock(symbol=self.formula.replace("Mock",""))]
+        self.composition.elements = [mock_el]
 
         self.density = 7.87 if "Fe" in self.formula else 8.90
         self.volume = 11.82 if "Fe" in self.formula else 10.94
@@ -220,7 +227,15 @@ def test_data_pipeline_integration(integration_test_config, integration_test_pat
     with patch('utils.config_loader.DEFAULT_CONFIG_PATH', config_file_path):
         with patch('scripts.process_raw_data.Structure.from_str', side_effect=side_effect_structure_from_str) as mock_struct_from_str_proc:
             with patch('scripts.process_raw_data.Dos.from_dict', side_effect=side_effect_dos_from_dict) as mock_dos_from_dict_proc:
-                process_data()
+                with patch('scripts.process_raw_data.structure_to_graph') as mock_s2g_in_integration: # New patch
+                    # Define a simple return value for the mocked structure_to_graph
+                    mock_s2g_in_integration.return_value = {
+                        "nodes": [{"atomic_number": 26, "electronegativity": 1.83, "original_site_index": 0}], # Example for Fe
+                        "edges": [],
+                        "num_nodes": 1,
+                        "num_edges": 0
+                    }
+                    process_data()
 
     # Assertions for process_data
     assert os.path.exists(integration_test_paths["processed_csv"]), "Processed CSV file was not created."
