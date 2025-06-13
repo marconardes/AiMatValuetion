@@ -124,4 +124,10 @@ This will discover and run all test files (e.g., `test_*.py`).
 *   The data fetching script (`fetch_mp_data.py`) will warn if the API key is not properly configured (see Configuration section) and may fail or retrieve limited data.
 *   Basic error messages are shown for CIF parsing issues or missing dataset files.
 
-[end of README.md]
+## Data Search Criteria
+
+The data acquisition strategy relies on specific roles for each data source:
+
+*   **SuperCon**: This dataset is the primary source for the target variable, which is the critical temperature (Tc) of superconducting materials.
+*   **OQMD (Open Quantum Materials Database)**: OQMD is used to obtain complementary material properties (e.g., formation energy, band gap, crystal structure) for compositions identified in the SuperCon dataset. It also serves as a broader database for sourcing material properties and crystal structures for general analysis and model training.
+*   **Materials Project (MP)**: The Materials Project API is an *optional* source for acquiring complementary material properties and crystal structures. It can be used similarly to OQMD to enrich the dataset or as an alternative source for such information.

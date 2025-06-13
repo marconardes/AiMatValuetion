@@ -20,8 +20,8 @@ O sucesso do projeto depende inteiramente da qualidade e da organização dos se
     - `[x]` Instalar bibliotecas de química/materiais (Pymatgen, RDKit). (B)
 
 - `[~]` **(Prioridade 2/20) Identificação e Acesso às Fontes de Dados:**
-    - `[~]` Acessar Materials Project (API), SuperCon (arquivos locais), OQMD (API identificada); ICSD pendente. (I)
-    - `[~]` Definir critérios de busca (SuperCon para Tc, OQMD/MP para propriedades). (B)
+    - `[~]` Acessar Materials Project (API, opcional), SuperCon (arquivos locais), OQMD (API identificada); ICSD pendente. (I)
+    - `[x]` Definir critérios de busca (SuperCon para Tc, OQMD/MP para propriedades). (B)
 
 - `[~]` **(Prioridade 3/20) Desenvolvimento de Scripts para Extração de Dados:**
     - `[x]` Scripts para extração de dados do Materials Project existem. (I)
@@ -30,15 +30,15 @@ O sucesso do projeto depende inteiramente da qualidade e da organização dos se
     - `[x]` Processar dados OQMD buscados (`oqmd_data_raw.json`) para selecionar/filtrar entradas e extrair features. (I)
     - `[x]` Armazenar os dados brutos em um formato organizado (ex: banco de dados local ou data lake). (B)
 
-- `[~]` **(Prioridade 4/20) Limpeza e Normalização dos Dados:** (I)
-    - `[~]` Validar os dados extraídos, tratando valores faltantes e inconsistências. (I)
-    - `[~]` Unificar unidades e formatos. Por exemplo, garantir que todas as estruturas cristalinas estejam em um formato padrão como arquivos CIF. (I)
+- `[x]` **(Prioridade 4/20) Limpeza e Normalização dos Dados:** (I)
+    - `[x]` Validar os dados extraídos, tratando valores faltantes e inconsistências. (I)
+    - `[x]` Unificar unidades e formatos. Por exemplo, garantir que todas as estruturas cristalinas estejam em um formato padrão como arquivos CIF. (I)
 
-- `[ ]` **(Prioridade 5/20) Definição e Implementação da Representação em Grafo:** (A)
-    - `[ ]` Definir formalmente como uma estrutura cristalina será convertida em um grafo. (A)
-        - `[ ]` Nós: Átomos (com features como número atômico, eletronegatividade). (I)
-        - `[ ]` Arestas: Ligações ou vizinhança (com features como distância). (I)
-    - `[ ]` Implementar a função de conversão Estrutura -> Grafo. (A)
+- `[x]` **(Prioridade 5/20) Definição e Implementação da Representação em Grafo:** (A)
+    - `[x]` Definir formalmente como uma estrutura cristalina será convertida em um grafo. (A)
+        - `[x]` Nós: Átomos (com features como número atômico, eletronegatividade). (I)
+        - `[x]` Arestas: Ligações ou vizinhança (com features como distância). (I)
+    - `[x]` Implementar a função de conversão Estrutura -> Grafo. (A)
 
 - `[~]` **(Prioridade 6/20) Pré-processamento e Divisão do Dataset:** (I)
     - `[ ]` Processar todos os dados limpos, convertendo-os em objetos de grafo. (A)

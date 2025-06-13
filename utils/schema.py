@@ -28,7 +28,11 @@ DATA_SCHEMA = {
     "target_band_gap": "Final Band Gap (eV) for ML",
     "target_formation_energy": "Final Formation Energy (eV/atom) for ML",
     "target_is_metal": "Final 'is_metal' boolean for ML",
-    "target_dos_at_fermi": "Final 'dos_at_fermi' for ML"
+    "target_dos_at_fermi": "Final 'dos_at_fermi' for ML",
+    "graph_nodes": "List of dictionaries, each representing an atom with its features (atomic_number, electronegativity, etc.).",
+    "graph_edges": "List of dictionaries, each representing a bond/connection with its features (e.g., source/target node indices, distance).",
+    "num_graph_nodes": "Number of nodes (atoms) in the graph.",
+    "num_graph_edges": "Number of edges (bonds/connections) in the graph."
 }
 
 # MANUAL_ENTRY_CSV_HEADERS defines the expected column order and names for CSV files
@@ -38,5 +42,6 @@ MANUAL_ENTRY_CSV_HEADERS = [
     "formula_pretty", "num_elements", "elements", "density_pg", "volume_pg", "volume_per_atom_pg",
     "spacegroup_number_pg", "crystal_system_pg", "lattice_a_pg", "lattice_b_pg", "lattice_c_pg",
     "lattice_alpha_pg", "lattice_beta_pg", "lattice_gamma_pg", "num_sites_pg",
+    "num_graph_nodes", "num_graph_edges",
     "target_band_gap", "target_formation_energy", "target_is_metal", "target_dos_at_fermi"
 ]

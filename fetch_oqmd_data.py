@@ -7,6 +7,20 @@ import re
 from pymatgen.core import Composition, DummySpecies
 from pymatgen.core.periodic_table import Element
 
+# This script fetches data from the Open Quantum Materials Database (OQMD)
+# primarily to find complementary material properties and crystal structures
+# for compositions identified in the SuperCon dataset.
+#
+# The current query strategy uses an 'element_set' filter based on the
+# elements present in each SuperCon composition. This means that for a
+# SuperCon composition like 'BaTiO3', the script will query OQMD for all
+# entries containing Ba, Ti, and O (e.g., BaTiO3, BaO, TiO2, Ba2TiO4, etc.).
+# This approach gathers a broad set of related materials.
+#
+# Exact compositional matching or selection of the most relevant OQMD entry
+# for a given SuperCon composition is typically handled in a downstream
+# data processing step (e.g., in `process_oqmd_data.py`).
+
 # Constants
 SUPERCON_PROCESSED_FILE = "supercon_processed.csv" # Assumes this file exists from previous step
 OQMD_BASE_URL = "http://oqmd.org/oqmdapi/formationenergy"
