@@ -115,7 +115,9 @@ def evaluate_gnn():
     # --- Load Test Data ---
     try:
         print(f"Loading test data from {gnn_test_graphs_path}...")
-        test_dataset = torch.load(gnn_test_graphs_path)
+        # Load full Data objects, not just weights. PyTorch 2.6+ defaults weights_only=True.
+        # Set to False as these .pt files contain complex torch_geometric Data objects.
+        test_dataset = torch.load(gnn_test_graphs_path, map_location=device, weights_only=False)
     except FileNotFoundError:
         print(f"Error: Test data file not found at {gnn_test_graphs_path}. Exiting.")
         return
@@ -278,7 +280,8 @@ def evaluate_gnn():
     # --- Random Baseline ---
     print("\nCalculating Random Baseline performance...")
     try:
-        train_dataset_for_baseline = torch.load(gnn_train_graphs_path)
+        # Load full Data objects for baseline calculation.
+        train_dataset_for_baseline = torch.load(gnn_train_graphs_path, map_location=device, weights_only=False)
     except FileNotFoundError:
         print(f"Error: Training data file not found at {gnn_train_graphs_path} for baseline calculation. Exiting baseline.")
         return # Cannot proceed with baseline if this fails

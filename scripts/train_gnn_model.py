@@ -137,9 +137,12 @@ def train_gnn():
     # --- Data Loading ---
     try:
         print(f"Loading training data from {gnn_train_graphs_path}...")
-        train_dataset = torch.load(gnn_train_graphs_path)
+        # Load full Data objects, not just weights. PyTorch 2.6+ defaults weights_only=True.
+        # Set to False as these .pt files contain complex torch_geometric Data objects.
+        train_dataset = torch.load(gnn_train_graphs_path, map_location=device, weights_only=False)
         print(f"Loading validation data from {gnn_val_graphs_path}...")
-        val_dataset = torch.load(gnn_val_graphs_path)
+        # Load full Data objects, not just weights.
+        val_dataset = torch.load(gnn_val_graphs_path, map_location=device, weights_only=False)
     except FileNotFoundError as e:
         print(f"Error: Data file not found. {e}. Although dummy data creation was attempted, something went wrong or path is incorrect.")
         return
