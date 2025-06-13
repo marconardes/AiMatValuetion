@@ -144,6 +144,52 @@ The data acquisition strategy relies on specific roles for each data source:
 *   **OQMD (Open Quantum Materials Database)**: OQMD is used to obtain complementary material properties (e.g., formation energy, band gap, crystal structure) for compositions identified in the SuperCon dataset. It also serves as a broader database for sourcing material properties and crystal structures for general analysis and model training.
 *   **Materials Project (MP)**: The Materials Project API is an *optional* source for acquiring complementary material properties and crystal structures. It can be used similarly to OQMD to enrich the dataset or as an alternative source for such information.
 
+## OracleNet GNN Model
+
+This project includes OracleNet, a Graph Neural Network (GNN) model designed for predicting material properties. The GNN takes material structures represented as graphs (nodes being atoms, edges being bonds/connections) and learns to predict target properties.
+
+### Data Preparation for GNN
+
+Before training the GNN, graph data needs to be prepared:
+- Raw material data (e.g., from Materials Project or OQMD containing CIF strings and target properties) is processed into graph structures.
+- The script `scripts/prepare_gnn_data.py` handles this conversion. It takes raw data (e.g., `mp_raw_data.json`), converts structures to graphs using `pymatgen` and `torch_geometric`, and saves datasets (`train_graphs.pt`, `val_graphs.pt`, `test_graphs.pt`) in the `data/` directory.
+  - Node features typically include atomic number and electronegativity.
+  - Edge features may include interatomic distances.
+  - Target properties (e.g., band gap, formation energy) are stored with each graph.
+
+### Training the GNN Model
+
+The OracleNet GNN model can be trained using the following script:
+
+```bash
+python scripts/train_gnn_model.py
+```
+
+- This script loads the preprocessed graph data from `data/train_graphs.pt` and `data/val_graphs.pt`.
+- It instantiates the `OracleNetGNN` model (a GCN-based architecture defined in `models/gnn_oracle_net.py`).
+- Training involves optimizing the model to predict a target property (e.g., band gap, specified by `gnn_target_index` in the configuration).
+- The script uses an Adam optimizer and Mean Squared Error (MSE) loss.
+- The model with the best validation loss is saved to `data/oracle_net_gnn.pth` (or as configured).
+- Key training hyperparameters (learning rate, batch size, epochs, hidden channels, target index) can be configured in `config.yml` under the `gnn_settings` section.
+
+### Evaluating the GNN Model
+
+To evaluate the performance of the trained GNN model on the test set:
+
+```bash
+python scripts/evaluate_gnn_model.py
+```
+
+- This script loads the trained model from `data/oracle_net_gnn.pth` and the test data from `data/test_graphs.pt`.
+- It calculates and reports metrics such as Mean Absolute Error (MAE) and Root Mean Squared Error (RMSE).
+- The GNN's performance is also compared against a random baseline predictor.
+- Basic error analysis is performed to show the top N predictions with the highest errors, helping to identify areas where the model struggles.
+- Configuration for evaluation (e.g., paths, `gnn_target_index`) is also managed via `config.yml` under `gnn_settings`.
+
+### GNN Configuration
+
+All settings related to the GNN model, training, evaluation, and dummy data generation (used if actual data files are missing) are located in `config.yml` under the `gnn_settings:` key. This includes file paths, learning parameters, model architecture details (like hidden channels), and target property selection.
+
 ## Technology Stack
 
 This project leverages the following core technologies:

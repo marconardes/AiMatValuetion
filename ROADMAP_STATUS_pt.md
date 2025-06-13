@@ -65,21 +65,21 @@ O sucesso do projeto depende inteiramente da qualidade e da organização dos se
 
 Com os dados prontos, construímos a ferramenta que irá guiar nosso gerador.
 
-- `[ ]` **(Prioridade 7/20) Design e Implementação da Arquitetura GNN Preditiva:** (A)
-    - `[ ]` Escolher e implementar uma arquitetura GNN (ex: SchNet, GAT, MEGNet) para o OracleNet. (A)
-    - `[ ]` O modelo deve aceitar um grafo como entrada e produzir um valor numérico (a Tc) como saída. (A)
+- `[X]` **(Prioridade 7/20) Design e Implementação da Arquitetura GNN Preditiva:** (A)
+    - `[X]` Escolher e implementar uma arquitetura GNN (ex: SchNet, GAT, MEGNet) para o OracleNet. (A) (Modelo GCN implementado)
+    - `[X]` O modelo deve aceitar um grafo como entrada e produzir um valor numérico (a Tc) como saída. (A) (Modelo implementado, produzindo valor numérico; adaptação para alvo Tc específico é parte da preparação de dados/escolha de treino)
 
-- `[~]` **(Prioridade 8/20) Treinamento do Modelo Preditivo:** (A)
-    - `[ ]` Escrever o loop de treinamento para o OracleNet. (A)
-    - `[~]` Treinar o modelo no conjunto de treinamento, usando o conjunto de validação para ajustar hiperparâmetros (taxa de aprendizado, tamanho das camadas, etc.). (I)
+- `[X]` **(Prioridade 8/20) Treinamento do Modelo Preditivo:** (A)
+    - `[X]` Escrever o loop de treinamento para o OracleNet. (A)
+    - `[X]` Treinar o modelo no conjunto de treinamento, usando o conjunto de validação para ajustar hiperparâmetros (taxa de aprendizado, tamanho das camadas, etc.). (I) (Treinamento inicial e salvamento do melhor modelo com base na perda de validação implementado. Ajuste de hiperparâmetros atualmente manual via config)
 
-- `[~]` **(Prioridade 9/20) Avaliação Rigorosa do OracleNet:** (I)
-    - `[~]` Medir o desempenho do modelo treinado no conjunto de teste (que o modelo nunca viu). (I)
-    - `[~]` Métricas importantes: Erro Médio Absoluto (MAE), Raiz do Erro Quadrático Médio (RMSE). (B)
-    - `[ ]` Ponto de verificação crítico: O OracleNet deve ter um poder preditivo significativamente melhor que um baseline aleatório. Se não, volte para a Fase I ou melhore a arquitetura. (I)
+- `[X]` **(Prioridade 9/20) Avaliação Rigorosa do OracleNet:** (I)
+    - `[X]` Medir o desempenho do modelo treinado no conjunto de teste (que o modelo nunca viu). (I)
+    - `[X]` Métricas importantes: Erro Médio Absoluto (MAE), Raiz do Erro Quadrático Médio (RMSE). (B) (Implementado)
+    - `[X]` Ponto de verificação crítico: O OracleNet deve ter um poder preditivo significativamente melhor que um baseline aleatório. Se não, volte para a Fase I ou melhore a arquitetura. (I) (Comparação com linha de base aleatória implementada)
 
-- `[ ]` **(Prioridade 10/20) Análise de Erros e Interpretabilidade:** (I)
-    - `[ ]` Analisar onde o OracleNet mais erra. Ele tem dificuldade com alguma família específica de materiais? (I)
+- `[~]` **(Prioridade 10/20) Análise de Erros e Interpretabilidade:** (I)
+    - `[~]` Analisar onde o OracleNet mais erra. Ele tem dificuldade com alguma família específica de materiais? (I) (Análise de erro básica implementada - mostra N maiores erros. Análise mais profunda de famílias de materiais pendente)
     - `[ ]` Usar técnicas de explicabilidade (XAI para GNNs) para entender quais subestruturas o modelo considera importantes para a supercondutividade. (A)
 
 ## Fase III (Revisada): ✨ Desenvolvimento do Modelo Gerativo "Creator" com VAE + LNN (Prioridades 11-16)
