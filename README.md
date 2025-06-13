@@ -287,7 +287,32 @@ python scripts/evaluate_gnn_model.py
 
 ### GNN Configuration
 
-All settings related to the GNN model, training, evaluation, and dummy data generation (used if actual data files are missing) are located in `config.yml` under the `gnn_settings:` key. This includes file paths, learning parameters, model architecture details (like hidden channels), and target property selection.
+All settings related to the OracleNet GNN model, including its training, evaluation, and dummy data generation (used by scripts if actual data files are missing), are centralized in `config.yml` under the `gnn_settings:` key.
+
+Key configurable parameters include:
+
+*   **File Paths**:
+    *   `train_graphs_path`: Path to the training graph data file (e.g., `"data/train_graphs.pt"`).
+    *   `val_graphs_path`: Path to the validation graph data file (e.g., `"data/val_graphs.pt"`).
+    *   `test_graphs_path`: Path to the test graph data file (e.g., `"data/test_graphs.pt"`).
+    *   `model_save_path`: Path where the trained GNN model weights will be saved (e.g., `"data/oracle_net_gnn.pth"`).
+
+*   **Training Hyperparameters**:
+    *   `learning_rate`: Learning rate for the Adam optimizer (e.g., `0.001`).
+    *   `batch_size`: Batch size for GNN training and evaluation (e.g., `32`).
+    *   `epochs`: Number of training epochs for the GNN (e.g., `100`).
+    *   `hidden_channels`: Number of hidden channels in the GNN layers (e.g., `64`).
+    *   `target_index`: Index of the target variable in `data.y` to be predicted (e.g., `0` if `data.y` is `[[target1, target2]]` and `target1` is desired).
+
+*   **Evaluation Settings**:
+    *   `num_top_errors_to_show`: Number of top error predictions to display during evaluation by `scripts/evaluate_gnn_model.py` (e.g., `5`).
+
+*   **Dummy Data Generation Settings**:
+    *   These settings are used by `scripts/train_gnn_model.py` and `scripts/evaluate_gnn_model.py` if the specified graph data files are not found, allowing the scripts to run with placeholder data.
+    *   `num_node_features_for_dummy_data`: Number of node features in the dummy graph data. This should match the GNN model's expected input if loading a pre-trained model (e.g., `2` for atomic number and electronegativity).
+    *   `num_targets_in_file_for_dummy_data`: Number of target properties stored in the `y` attribute of dummy graph `Data` objects. This must be consistent with `gnn_target_index` (i.e., `gnn_target_index < num_targets_in_file_for_dummy_data`). (e.g., `2` if dummy `y` is `[[val1, val2]]`).
+
+Carefully review and adjust these parameters in `config.yml` as needed for your specific dataset and training requirements.
 
 ## Technology Stack
 

@@ -287,7 +287,32 @@ python scripts/evaluate_gnn_model.py
 
 ### Configuração do GNN
 
-Todas as configurações relacionadas ao modelo GNN, treinamento, avaliação e geração de dados fictícios (usados se os arquivos de dados reais estiverem ausentes) estão localizadas em `config.yml` sob a chave `gnn_settings:`. Isso inclui caminhos de arquivo, parâmetros de aprendizado, detalhes da arquitetura do modelo (como canais ocultos) e seleção da propriedade alvo.
+Todas as configurações relacionadas ao modelo OracleNet GNN, incluindo seu treinamento, avaliação e geração de dados fictícios (usados pelos scripts caso os arquivos de dados reais não sejam encontrados), são centralizadas em `config.yml` sob a chave `gnn_settings:`.
+
+Os principais parâmetros configuráveis incluem:
+
+*   **Caminhos dos Arquivos**:
+    *   `train_graphs_path`: Caminho para o arquivo de dados do grafo de treinamento (e.g., `"data/train_graphs.pt"`).
+    *   `val_graphs_path`: Caminho para o arquivo de dados do grafo de validação (e.g., `"data/val_graphs.pt"`).
+    *   `test_graphs_path`: Caminho para o arquivo de dados do grafo de teste (e.g., `"data/test_graphs.pt"`).
+    *   `model_save_path`: Caminho onde os pesos do modelo GNN treinado serão salvos (e.g., `"data/oracle_net_gnn.pth"`).
+
+*   **Hiperparâmetros de Treinamento**:
+    *   `learning_rate`: Taxa de aprendizado para o otimizador Adam (e.g., `0.001`).
+    *   `batch_size`: Tamanho do lote para treinamento e avaliação do GNN (e.g., `32`).
+    *   `epochs`: Número de épocas de treinamento para o GNN (e.g., `100`).
+    *   `hidden_channels`: Número de canais ocultos nas camadas do GNN (e.g., `64`).
+    *   `target_index`: Índice da variável alvo em `data.y` a ser prevista (e.g., `0` se `data.y` for `[[alvo1, alvo2]]` e `alvo1` for o desejado).
+
+*   **Configurações de Avaliação**:
+    *   `num_top_errors_to_show`: Número de principais predições com erro a serem exibidas durante a avaliação por `scripts/evaluate_gnn_model.py` (e.g., `5`).
+
+*   **Configurações de Geração de Dados Fictícios**:
+    *   Essas configurações são usadas por `scripts/train_gnn_model.py` e `scripts/evaluate_gnn_model.py` se os arquivos de dados de grafo especificados não forem encontrados, permitindo que os scripts sejam executados com dados de placeholder.
+    *   `num_node_features_for_dummy_data`: Número de características de nó nos dados de grafo fictícios. Isso deve corresponder à entrada esperada do modelo GNN se estiver carregando um modelo pré-treinado (e.g., `2` para número atômico e eletronegatividade).
+    *   `num_targets_in_file_for_dummy_data`: Número de propriedades alvo armazenadas no atributo `y` dos objetos `Data` de grafo fictícios. Isso deve ser consistente com `gnn_target_index` (i.e., `gnn_target_index < num_targets_in_file_for_dummy_data`). (e.g., `2` se o `y` fictício for `[[val1, val2]]`).
+
+Revise e ajuste cuidadosamente esses parâmetros em `config.yml` conforme necessário para seu conjunto de dados e requisitos de treinamento específicos.
 
 ## Pilha Tecnológica (Stack)
 
