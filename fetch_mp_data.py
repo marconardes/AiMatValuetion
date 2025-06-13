@@ -8,6 +8,12 @@ from pymatgen.core import Composition, Structure # Ensure Structure is imported
 
 # DATA_SCHEMA is now imported from utils.schema
 
+# This script fetches data from the Materials Project (MP).
+# Usage of the MP API is considered optional for this project.
+# If an MP_API_KEY is not provided in config.yml or environment variables,
+# the script will attempt to proceed with anonymous access via the mp-api client,
+# which may have limitations or fail for queries requiring authentication.
+
 def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with loaded var
     full_config = load_config() # Use the new centralized loader
 
@@ -52,6 +58,9 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
     # Cache for initial summary query results
     summary_docs_cache = None
 
+    # Attempting to connect to Materials Project.
+    # If api_key is None (due to not being found in config/env or being the placeholder),
+    # mp-api client might attempt anonymous access or raise an error if queries require authentication.
     with MPRester(api_key=api_key) as mpr:
         print("Fetching initial candidate materials (Fe-containing with band_gap data)...")
         try:

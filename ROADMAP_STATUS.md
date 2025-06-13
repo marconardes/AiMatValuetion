@@ -20,8 +20,8 @@ The project's success hinges entirely on the quality and organization of your da
     - `[x]` Install chemistry/materials libraries (Pymatgen, RDKit). (B)
 
 - `[~]` **(Priority 2/20) Identification and Access to Data Sources:**
-    - `[~]` Access Materials Project (API), SuperCon (local files), OQMD (API identified); ICSD pending. (I)
-    - `[~]` Define search criteria (SuperCon for Tc, OQMD/MP for properties). (B)
+    - `[~]` Access Materials Project (API, optional), SuperCon (local files), OQMD (API identified); ICSD pending. (I)
+    - `[x]` Define search criteria (SuperCon for Tc, OQMD/MP for properties). (B)
 
 - `[~]` **(Priority 3/20) Development of Data Extraction Scripts:**
     - `[x]` Scripts for Materials Project data extraction exist. (I)
@@ -34,11 +34,11 @@ The project's success hinges entirely on the quality and organization of your da
     - `[~]` Validate extracted data, handling missing values and inconsistencies. (I)
     - `[~]` Unify units and formats. For example, ensure all crystal structures are in a standard format like CIF files. (I)
 
-- `[ ]` **(Priority 5/20) Definition and Implementation of Graph Representation:** (A)
-    - `[ ]` Formally define how a crystal structure will be converted into a graph. (A)
-        - `[ ]` Nodes: Atoms (with features like atomic number, electronegativity). (I)
-        - `[ ]` Edges: Bonds or neighborhood (with features like distance). (I)
-    - `[ ]` Implement the Structure -> Graph conversion function. (A)
+- `[x]` **(Priority 5/20) Definition and Implementation of Graph Representation:** (A)
+    - `[x]` Formally define how a crystal structure will be converted into a graph. (A)
+        - `[x]` Nodes: Atoms (with features like atomic number, electronegativity). (I)
+        - `[x]` Edges: Bonds or neighborhood (with features like distance). (I)
+    - `[x]` Implement the Structure -> Graph conversion function. (A)
 
 - `[~]` **(Priority 6/20) Dataset Preprocessing and Splitting:** (I)
     - `[ ]` Process all cleaned data, converting them into graph objects. (A)
