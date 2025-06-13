@@ -52,3 +52,15 @@ gui:
     model_formation_energy: "model_target_formation_energy.joblib"
     model_dos_at_fermi: "model_dos_at_fermi.joblib"
   manual_entry_csv_filename: "Fe_materials_dataset.csv" # Default file for manual entry save
+
+# prepare_gnn_data.py settings
+prepare_gnn_data:
+  raw_data_filename: "mp_raw_data.json"  # Or reference an existing one like process_data.raw_data_filename
+  processed_graphs_filename: "data/processed/processed_graphs.pt"
+  train_graphs_filename: "data/processed/train_graphs.pt"
+  val_graphs_filename: "data/processed/val_graphs.pt"
+  test_graphs_filename: "data/processed/test_graphs.pt"
+  random_seed: 42
+  train_ratio: 0.7  # 70% - Renamed from train_size for consistency with script
+  val_ratio: 0.2    # 20% - Renamed from val_size
+  test_ratio: 0.1   # 10% - Renamed from test_size

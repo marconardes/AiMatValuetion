@@ -56,10 +56,10 @@ O sucesso do projeto depende inteiramente da qualidade e da organização dos se
         - `[x]` Arestas: Ligações ou vizinhança (com features como distância). (I)
     - `[x]` Implementar a função de conversão Estrutura -> Grafo. (A)
 
-- `[~]` **(Prioridade 6/20) Pré-processamento e Divisão do Dataset:** (I)
-    - `[ ]` Processar todos os dados limpos, convertendo-os em objetos de grafo. (A)
-    - `[ ]` Salvar este dataset processado para acesso rápido. (B)
-    - `[~]` Dividir o dataset em conjuntos de Treinamento (70%), Validação (20%) e Teste (10%). (B)
+- `[x]` **(Prioridade 6/20) Pré-processamento e Divisão do Dataset:** (I)
+    - `[x]` Processar todos os dados limpos, convertendo-os em objetos de grafo. (A)
+    - `[x]` Salvar este dataset processado para acesso rápido. (B)
+    - `[x]` Dividir o dataset em conjuntos de Treinamento (70%), Validação (20%) e Teste (10%). (B)
 
 ## Fase II: 🤖 Desenvolvimento do Modelo Preditivo "OracleNet" (Prioridades 7-10)
 
