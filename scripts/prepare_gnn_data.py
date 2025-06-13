@@ -1,6 +1,7 @@
 import json
 import os
 import warnings
+import math
 
 import torch
 from torch_geometric.data import Data
@@ -38,8 +39,8 @@ def create_graph_dataset(config_path='config.yml'):
     val_ratio = prepare_config.get('val_ratio', 0.2)
     test_ratio = prepare_config.get('test_ratio', 0.1)
 
-    if not (train_ratio + val_ratio + test_ratio == 1.0): # Basic check
-        warnings.warn(f"Train ({train_ratio}), validation ({val_ratio}), and test ({test_ratio}) ratios do not sum to 1.0. Please check config.yml.", UserWarning)
+    if not math.isclose(train_ratio + val_ratio + test_ratio, 1.0):
+        warnings.warn(f"Train ({train_ratio}), validation ({val_ratio}), and test ({test_ratio}) ratios do not sum closely to 1.0. Please check config.yml.", UserWarning)
         # For now, we'll proceed, but in a robust script, you might normalize or exit.
 
     print("Configuration loaded.")
@@ -200,64 +201,64 @@ def create_graph_dataset(config_path='config.yml'):
         num_total = len(all_graph_data)
 
         # Ensure we have enough data to split, at least 1 sample per set desired
-        if num_total < (1/min(train_ratio, val_ratio, test_ratio) if min(train_ratio, val_ratio, test_ratio) > 0 else float('inf')): # Avoid division by zero
-            warnings.warn(f"Not enough data ({num_total} samples) to perform the desired split. Minimum samples required based on smallest ratio. Skipping split.", UserWarning)
+        # if num_total < (1/min(train_ratio, val_ratio, test_ratio) if min(train_ratio, val_ratio, test_ratio) > 0 else float('inf')): # Avoid division by zero
+        #     warnings.warn(f"Not enough data ({num_total} samples) to perform the desired split. Minimum samples required based on smallest ratio. Skipping split.", UserWarning)
+        # The else: was here, it's now removed. The following block is unindented.
+        # First split: Train vs. (Validation + Test)
+        # train_test_split takes the size of the TEST set as parameter. So (1 - train_ratio) is val_ratio + test_ratio
+        train_data, temp_data = train_test_split(
+            all_graph_data,
+            test_size=(val_ratio + test_ratio),
+            random_state=random_seed,
+            shuffle=True
+        )
+
+        # Second split: Validation vs. Test from temp_data
+        # The test_size for this split must be relative to temp_data's size
+        # test_ratio_for_temp_split = test_ratio / (val_ratio + test_ratio)
+        # Handle potential division by zero if val_ratio + test_ratio is 0 (though checked by sum to 1 earlier)
+        if (val_ratio + test_ratio) == 0:
+             if test_ratio > 0: # Trying to get a test set when val+test is 0, impossible
+                 val_data = temp_data
+                 test_data = []
+                 warnings.warn("Validation and Test ratios are zero, but test ratio is > 0. Cannot split for test set from empty remainder.", UserWarning)
+             else: # Both val and test are 0
+                 val_data = temp_data # Or [] depending on desired behavior
+                 test_data = []
+        elif not temp_data: # If temp_data is empty (e.g. train_ratio was 1.0)
+            val_data = []
+            test_data = []
         else:
-            # First split: Train vs. (Validation + Test)
-            # train_test_split takes the size of the TEST set as parameter. So (1 - train_ratio) is val_ratio + test_ratio
-            train_data, temp_data = train_test_split(
-                all_graph_data,
-                test_size=(val_ratio + test_ratio),
-                random_state=random_seed,
+            val_data, test_data = train_test_split(
+                temp_data,
+                test_size=test_ratio / (val_ratio + test_ratio),
+                random_state=random_seed, # Use same seed for reproducibility of this part of split
                 shuffle=True
             )
 
-            # Second split: Validation vs. Test from temp_data
-            # The test_size for this split must be relative to temp_data's size
-            # test_ratio_for_temp_split = test_ratio / (val_ratio + test_ratio)
-            # Handle potential division by zero if val_ratio + test_ratio is 0 (though checked by sum to 1 earlier)
-            if (val_ratio + test_ratio) == 0:
-                 if test_ratio > 0: # Trying to get a test set when val+test is 0, impossible
-                     val_data = temp_data
-                     test_data = []
-                     warnings.warn("Validation and Test ratios are zero, but test ratio is > 0. Cannot split for test set from empty remainder.", UserWarning)
-                 else: # Both val and test are 0
-                     val_data = temp_data # Or [] depending on desired behavior
-                     test_data = []
-            elif not temp_data: # If temp_data is empty (e.g. train_ratio was 1.0)
-                val_data = []
-                test_data = []
+        print(f"\nDataset split results:")
+        print(f"  Training set: {len(train_data)} samples ({len(train_data)/num_total*100:.1f}%)")
+        print(f"  Validation set: {len(val_data)} samples ({len(val_data)/num_total*100:.1f}%)")
+        print(f"  Test set: {len(test_data)} samples ({len(test_data)/num_total*100:.1f}%)")
+
+        # 6. Save the split datasets
+        datasets_to_save = {
+            "train": (train_data, train_graphs_path),
+            "validation": (val_data, val_graphs_path),
+            "test": (test_data, test_graphs_path),
+        }
+
+        for name, (data_list, path) in datasets_to_save.items():
+            if data_list: # Only save if list is not empty
+                output_dir = os.path.dirname(path)
+                if output_dir and not os.path.exists(output_dir):
+                    os.makedirs(output_dir)
+                    print(f"Created directory for {name} data: {output_dir}")
+
+                torch.save(data_list, path)
+                print(f"Saved {name} data ({len(data_list)} samples) to {path}")
             else:
-                val_data, test_data = train_test_split(
-                    temp_data,
-                    test_size=test_ratio / (val_ratio + test_ratio),
-                    random_state=random_seed, # Use same seed for reproducibility of this part of split
-                    shuffle=True
-                )
-
-            print(f"\nDataset split results:")
-            print(f"  Training set: {len(train_data)} samples ({len(train_data)/num_total*100:.1f}%)")
-            print(f"  Validation set: {len(val_data)} samples ({len(val_data)/num_total*100:.1f}%)")
-            print(f"  Test set: {len(test_data)} samples ({len(test_data)/num_total*100:.1f}%)")
-
-            # 6. Save the split datasets
-            datasets_to_save = {
-                "train": (train_data, train_graphs_path),
-                "validation": (val_data, val_graphs_path),
-                "test": (test_data, test_graphs_path),
-            }
-
-            for name, (data_list, path) in datasets_to_save.items():
-                if data_list: # Only save if list is not empty
-                    output_dir = os.path.dirname(path)
-                    if output_dir and not os.path.exists(output_dir):
-                        os.makedirs(output_dir)
-                        print(f"Created directory for {name} data: {output_dir}")
-
-                    torch.save(data_list, path)
-                    print(f"Saved {name} data ({len(data_list)} samples) to {path}")
-                else:
-                    print(f"{name.capitalize()} dataset is empty. Nothing to save to {path}.")
+                print(f"{name.capitalize()} dataset is empty. Nothing to save to {path}.")
     else:
         # This case should ideally be caught earlier, after the processing summary.
         print("No graph data available to split. Skipping splitting and saving of splits.")
