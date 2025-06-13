@@ -107,18 +107,31 @@ def mock_config_for_processing(tmp_path):
 # Expected CSV columns based on DATA_SCHEMA (excluding non-CSV fields)
 EXPECTED_CSV_HEADERS_FROM_SCHEMA = [key for key in DATA_SCHEMA.keys() if key not in ['cif_string', 'dos_object_mp']]
 
-@patch('scripts.process_raw_data.Structure.from_str')
-@patch('scripts.process_raw_data.Dos.from_dict')
-def test_successful_processing_with_mocks(mock_dos_from_dict, mock_structure_from_str, tmp_path, mock_raw_data_file, mock_config_for_processing, capsys):
+@patch('scripts.process_raw_data.structure_to_graph') # Applied third, so it's the third mock argument m_sg
+@patch('scripts.process_raw_data.Structure.from_str')  # Applied second, so it's the second mock argument m_sfs
+@patch('scripts.process_raw_data.Dos.from_dict')       # Applied first (bottom-most), so it's the first mock argument m_dfd
+def test_successful_processing_with_mocks(m_dfd, m_sfs, m_sg, tmp_path, mock_raw_data_file, mock_config_for_processing, capsys):
     """Test basic successful processing with detailed mocks for pymatgen objects."""
+
+    # Configure mock_structure_to_graph (m_sg)
+    mock_graph_output = {
+        "nodes": [{"atomic_number": 14, "electronegativity": 1.90, "original_site_index": 0}], # For Si
+        "edges": [],
+        "num_nodes": 1, # Simplified for the mock
+        "num_edges": 0
+    }
+    m_sg.return_value = mock_graph_output
 
     # --- Setup mock Structure object ---
     mock_structure = MagicMock(spec=True) # spec=True helps catch incorrect attribute access
 
     # Mock attributes for composition
+    mock_si_element = MagicMock()
+    mock_si_element.symbol = 'Si' # Explicitly set the .symbol attribute
+
     mock_composition = MagicMock()
     mock_composition.reduced_formula = "SiMock"
-    mock_composition.elements = [MagicMock(symbol='Si')] # Simulate element objects
+    mock_composition.elements = [mock_si_element] # Use the element mock with .symbol defined
     mock_structure.composition = mock_composition
 
     mock_structure.density = 1.23
@@ -133,7 +146,7 @@ def test_successful_processing_with_mocks(mock_dos_from_dict, mock_structure_fro
     mock_lattice.alpha, mock_lattice.beta, mock_lattice.gamma = 90, 90, 90
     mock_structure.lattice = mock_lattice
 
-    mock_structure_from_str.return_value = mock_structure
+    m_sfs.return_value = mock_structure # m_sfs is mock for Structure.from_str
 
     # --- Setup mock Dos object behavior per material_id ---
     # This mapping will help the side_effect choose the right mock
@@ -162,7 +175,7 @@ def test_successful_processing_with_mocks(mock_dos_from_dict, mock_structure_fro
         if dos_dict_arg.get('efermi') == 0.0: return dos_mock_mapping['mp-123']
         if dos_dict_arg.get('efermi') == 1.0: return dos_mock_mapping['mp-456']
         return MagicMock(spec=True, name="DefaultDosMock") # Default if no specific match
-    mock_dos_from_dict.side_effect = side_effect_dos_from_dict
+    m_dfd.side_effect = side_effect_dos_from_dict # m_dfd is mock for Dos.from_dict
 
     sample_data = [SAMPLE_RAW_MATERIAL_FULL, SAMPLE_RAW_MATERIAL_METAL, SAMPLE_RAW_MATERIAL_MISSING_CIF]
     raw_json_path = mock_raw_data_file(sample_data)

@@ -18,45 +18,56 @@ def structure_to_graph(structure: Structure) -> dict:
 
     # 1. Create nodes
     for i, site in enumerate(structure):
-        electronegativity = None
+        electronegativity_val = None
         try:
-            electronegativity = site.specie.X
+            electronegativity_val = site.specie.X
         except AttributeError:
-            # Fallback if .X is not available or specie is not a standard element
-            # For pymatgen > 2023.x.x, Element(site.specie.symbol).X might be more robust
-            # but site.specie.X should work for common elements.
             try:
-                element = Element(site.specie.symbol)
-                electronegativity = element.X
-            except Exception: # Broad exception to catch any issue with Element lookup
-                electronegativity = 0.0 # Default value if electronegativity cannot be found
+                element = Element(site.specie.symbol) # Ensure Element is imported
+                electronegativity_val = element.X
+            except Exception: # Broad exception for Element lookup issues
+                electronegativity_val = 0.0 # Default value
                 print(f"Warning: Could not determine electronegativity for site {i} ({site.specie.symbol}). Defaulting to 0.0.")
 
+        final_en = None
+        if electronegativity_val is not None:
+            try:
+                final_en = float(electronegativity_val)
+            except (TypeError, ValueError): # Handle if it's not float-convertible
+                final_en = 0.0 # Fallback
+                print(f"Warning: Electronegativity value '{electronegativity_val}' for site {i} could not be converted to float. Defaulting to 0.0.")
+        # If electronegativity_val was None, final_en remains None
 
         node = {
-            "atomic_number": site.specie.number,
-            "electronegativity": electronegativity,
-            "original_site_index": i
+            "atomic_number": int(site.specie.number),
+            "electronegativity": final_en,
+            "original_site_index": int(i) # i from enumerate is already int
         }
         nodes.append(node)
 
     # 2. Determine edges
-    # Using a cutoff radius of 3.0 Angstroms as specified
-    # get_all_neighbors returns a list of lists; each inner list contains Neighbor objects for a site
-    all_neighbors = structure.get_all_neighbors(r=3.0)
+    cutoff = 3.0  # Define the cutoff radius
+    all_neighbors = structure.get_all_neighbors(r=cutoff) # Still useful for candidate pairs
+    added_edges = set()
 
-    for i, site_neighbors in enumerate(all_neighbors):
-        for neighbor_info in site_neighbors:
-            j_index = neighbor_info.index # neighbor_info is a Neighbor object, .index is the site index
+    for i, site_neighbors_of_i in enumerate(all_neighbors):
+        for neighbor_info in site_neighbors_of_i:
+            j_index = neighbor_info.index
 
-            # To avoid duplicate edges (i,j) and (j,i) and self-loops (i,i)
-            if j_index > i:
-                edge = {
-                    "source_node_index": i,
-                    "target_node_index": j_index,
-                    "distance": neighbor_info.nn_distance
-                }
-                edges.append(edge)
+            edge_key = tuple(sorted((i, j_index)))
+
+            if i != j_index and edge_key not in added_edges:
+                # Get the true shortest distance between original sites i and j_index
+                true_shortest_distance = structure.get_distance(i, j_index)
+
+                # Only add if this shortest distance is within the cutoff
+                if true_shortest_distance <= cutoff:
+                    edges.append({
+                        "source_node_index": int(edge_key[0]),
+                        "target_node_index": int(edge_key[1]),
+                        "distance": float(true_shortest_distance)
+                    })
+                    added_edges.add(edge_key)
 
     return {
         "nodes": nodes,

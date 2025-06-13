@@ -103,10 +103,10 @@ class TestPrepareGnnData(unittest.TestCase):
         self.assertTrue(os.path.exists(test_path), "Test graphs file not found.")
 
         # Load data and check contents
-        all_graphs = torch.load(processed_path)
-        train_graphs = torch.load(train_path)
-        val_graphs = torch.load(val_path)
-        test_graphs = torch.load(test_path)
+        all_graphs = torch.load(processed_path, weights_only=False)
+        train_graphs = torch.load(train_path, weights_only=False)
+        val_graphs = torch.load(val_path, weights_only=False)
+        test_graphs = torch.load(test_path, weights_only=False)
 
         self.assertIsInstance(all_graphs, list)
         self.assertTrue(all(isinstance(g, Data) for g in all_graphs))

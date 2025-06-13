@@ -1,4 +1,5 @@
 import unittest
+import math
 from pymatgen.core.structure import Structure
 from pymatgen.core.lattice import Lattice
 from pymatgen.core.periodic_table import Element, Specie
@@ -17,7 +18,7 @@ class TestStructureToGraph(unittest.TestCase):
 
         node = graph_data["nodes"][0]
         self.assertEqual(node["atomic_number"], 2) # He
-        self.assertAlmostEqual(node["electronegativity"], Element("He").X) # Pauling electronegativity
+        self.assertTrue(math.isnan(node["electronegativity"]), "Helium electronegativity should be NaN, as Element('He').X is expected to be NaN by Pymatgen for noble gases.")
         self.assertEqual(node["original_site_index"], 0)
 
     def test_single_atom_with_periodic_neighbors(self):
@@ -99,7 +100,8 @@ class TestStructureToGraph(unittest.TestCase):
         graph_data = structure_to_graph(struct) # Default cutoff 3.0A
 
         self.assertEqual(graph_data["num_nodes"], 2)
-        self.assertEqual(graph_data["num_edges"], 0)
+        # Expect 1 edge due to periodic image connecting the atoms (sqrt(3) = 1.732A < 3.0A cutoff)
+        self.assertEqual(graph_data["num_edges"], 1)
 
     def test_data_types_and_content_li_bcc(self):
         """Test data types and content for a simple BCC Li structure (2 atoms in conv. cell)."""
