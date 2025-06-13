@@ -14,20 +14,21 @@ Este plano transforma as fases estratégicas em um fluxo de trabalho acionável,
 O sucesso do projeto depende inteiramente da qualidade e da organização dos seus dados.
 
 - `[~]` **(Prioridade 1/20) Setup do Ambiente de Desenvolvimento:**
-    - `[x]` Configurar um repositório de código (Git).
-    - `[~]` Instalar bibliotecas essenciais de IA (PyTorch, TensorFlow).
-    - `[~]` Instalar bibliotecas de IA para grafos (PyTorch Geometric ou DGL).
-    - `[x]` Instalar bibliotecas de química/materiais (Pymatgen, RDKit).
+    - `[x]` Configurar um repositório de código (Git). (B)
+    - `[~]` Instalar bibliotecas essenciais de IA (PyTorch, TensorFlow). (B)
+    - `[~]` Instalar bibliotecas de IA para grafos (PyTorch Geometric ou DGL). (B)
+    - `[x]` Instalar bibliotecas de química/materiais (Pymatgen, RDKit). (B)
 
 - `[~]` **(Prioridade 2/20) Identificação e Acesso às Fontes de Dados:**
-    - `[~]` Acessar Materials Project (API), SuperCon (arquivos locais), OQMD (API identificada); ICSD pendente.
-    - `[~]` Definir critérios de busca (SuperCon para Tc, OQMD/MP para propriedades).
+    - `[~]` Acessar Materials Project (API), SuperCon (arquivos locais), OQMD (API identificada); ICSD pendente. (I)
+    - `[~]` Definir critérios de busca (SuperCon para Tc, OQMD/MP para propriedades). (B)
 
 - `[~]` **(Prioridade 3/20) Desenvolvimento de Scripts para Extração de Dados:**
-    - `[x]` Scripts para extração de dados do Materials Project existem.
-    - `[x]` Desenvolver script para processar dataset local SuperCon (`raw.tsv`) para composições e Tc.
-    - `[x]` Desenvolver script para buscar dados complementares da API OQMD para composições do SuperCon.
-    - `[x]` Armazenar os dados brutos em um formato organizado (ex: banco de dados local ou data lake).
+    - `[x]` Scripts para extração de dados do Materials Project existem. (I)
+    - `[x]` Desenvolver script para processar dataset local SuperCon (`raw.tsv`) para composições e Tc. (I)
+    - `[x]` Desenvolver script para buscar dados complementares da API OQMD para composições do SuperCon. (I)
+    - `[x]` Processar dados OQMD buscados (`oqmd_data_raw.json`) para selecionar/filtrar entradas e extrair features. (I)
+    - `[x]` Armazenar os dados brutos em um formato organizado (ex: banco de dados local ou data lake). (B)
 
 - `[~]` **(Prioridade 4/20) Limpeza e Normalização dos Dados:**
     - `[~]` Validar os dados extraídos, tratando valores faltantes e inconsistências.
