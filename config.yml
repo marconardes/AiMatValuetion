@@ -4,7 +4,7 @@ mp_api_key: "YOUR_MP_API_KEY"  # User should replace this
 # fetch_mp_data.py settings
 fetch_data:
   max_total_materials: 50 # Set to -5 to fetch all matching materials, ignoring criteria_set limits and this overall maximum.
-  output_filename: "mp_raw_data.json"
+  output_filename: "data/mp_raw_data.json"
   criteria_sets:
     - target_n_elements: 2
       limit_per_set: 20
@@ -21,41 +21,41 @@ fetch_data:
 
 # process_raw_data.py settings
 process_data:
-  raw_data_filename: "mp_raw_data.json" # This should match fetch_data.output_filename
-  output_filename: "Fe_materials_dataset.csv"
+  raw_data_filename: "data/mp_raw_data.json" # This should match fetch_data.output_filename
+  output_filename: "data/Fe_materials_dataset.csv"
 
 # train_model.py settings
 train_model:
-  dataset_filename: "Fe_materials_dataset.csv" # Should match process_data.output_filename
+  dataset_filename: "data/Fe_materials_dataset.csv" # Should match process_data.output_filename
   test_size: 0.2
   random_state: 42
   n_estimators: 10 # Reduced from 100 for faster example runs; user can increase
   models:
-    dos_at_fermi: "model_dos_at_fermi.joblib"
-    target_band_gap: "model_target_band_gap.joblib"
-    target_formation_energy: "model_target_formation_energy.joblib"
-    target_is_metal: "model_target_is_metal.joblib"
+    dos_at_fermi: "data/model_dos_at_fermi.joblib"
+    target_band_gap: "data/model_target_band_gap.joblib"
+    target_formation_energy: "data/model_target_formation_energy.joblib"
+    target_is_metal: "data/model_target_is_metal.joblib"
   preprocessors:
-    main: "preprocessor_main.joblib"
-    dos_at_fermi: "preprocessor_dos_at_fermi.joblib" # Specific preprocessor for DOS model
+    main: "data/preprocessor_main.joblib"
+    dos_at_fermi: "data/preprocessor_dos_at_fermi.joblib" # Specific preprocessor for DOS model
 
 # material_predictor_gui.py settings
 gui:
   title: "Material Property Predictor Prototype"
   geometry: "900x700"
-  dataset_filename: "Fe_materials_dataset.csv" # For manual entry saving
+  dataset_filename: "data/Fe_materials_dataset.csv" # For manual entry saving
   models_to_load: # Matches keys used in the Application class
-    preprocessor_main: "preprocessor_main.joblib"
-    preprocessor_dos: "preprocessor_dos_at_fermi.joblib"
-    model_is_metal: "model_target_is_metal.joblib"
-    model_band_gap: "model_target_band_gap.joblib"
-    model_formation_energy: "model_target_formation_energy.joblib"
-    model_dos_at_fermi: "model_dos_at_fermi.joblib"
-  manual_entry_csv_filename: "Fe_materials_dataset.csv" # Default file for manual entry save
+    preprocessor_main: "data/preprocessor_main.joblib"
+    preprocessor_dos: "data/preprocessor_dos_at_fermi.joblib"
+    model_is_metal: "data/model_target_is_metal.joblib"
+    model_band_gap: "data/model_target_band_gap.joblib"
+    model_formation_energy: "data/model_target_formation_energy.joblib"
+    model_dos_at_fermi: "data/model_dos_at_fermi.joblib"
+  manual_entry_csv_filename: "data/Fe_materials_dataset.csv" # Default file for manual entry save
 
 # prepare_gnn_data.py settings
 prepare_gnn_data:
-  raw_data_filename: "mp_raw_data.json"  # Or reference an existing one like process_data.raw_data_filename
+  raw_data_filename: "data/mp_raw_data.json"  # Or reference an existing one like process_data.raw_data_filename
   processed_graphs_filename: "data/processed/processed_graphs.pt"
   train_graphs_filename: "data/processed/train_graphs.pt"
   val_graphs_filename: "data/processed/val_graphs.pt"

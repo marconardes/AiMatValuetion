@@ -23,8 +23,8 @@ def process_data():
     else:
         process_config_params = full_config.get('process_data', {})
 
-    raw_data_filename = process_config_params.get('raw_data_filename', "mp_raw_data.json")
-    csv_filename_out = process_config_params.get('output_filename', "Fe_materials_dataset.csv")
+    raw_data_filename = process_config_params.get('raw_data_filename', "data/mp_raw_data.json")
+    csv_filename_out = process_config_params.get('output_filename', "data/Fe_materials_dataset.csv")
 
     if not os.path.exists(raw_data_filename):
         print(f"Error: Raw data file '{raw_data_filename}' not found. Please run fetch_mp_data.py first.")

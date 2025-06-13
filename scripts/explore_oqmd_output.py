@@ -1,19 +1,19 @@
 import json
 import os # Added os for path check
 
-OQMD_RAW_DATA_FILE = "oqmd_data_raw.json"
+OQMD_RAW_DATA_FILE = "data/oqmd_data_raw.json"
 
 print(f"Exploring structure of {OQMD_RAW_DATA_FILE}...")
 
 try:
     if not os.path.exists(OQMD_RAW_DATA_FILE):
         # Added a check for the file and an attempt to generate it
-        print(f"WARNING: {OQMD_RAW_DATA_FILE} not found. Attempting to generate it by running fetch_oqmd_data.py...")
-        if os.path.exists("fetch_oqmd_data.py"):
+        print(f"WARNING: {OQMD_RAW_DATA_FILE} not found. Attempting to generate it by running scripts/fetch_oqmd_data.py...")
+        if os.path.exists("scripts/fetch_oqmd_data.py"):
             try:
                 # Ensure fetch_oqmd_data.py is executable
-                os.chmod("fetch_oqmd_data.py", 0o755)
-                run_prereq_script_command = "python fetch_oqmd_data.py"
+                os.chmod("scripts/fetch_oqmd_data.py", 0o755)
+                run_prereq_script_command = "python scripts/fetch_oqmd_data.py"
                 # Before running, temporarily reduce LIMIT_COMPOSITIONS_TO_QUERY in fetch_oqmd_data.py for this regeneration
                 # This is complex to do robustly from here. For now, assume it runs with its current settings.
                 # Or, if the file is critical, the user should ensure it's generated with appropriate limits first.
@@ -27,10 +27,10 @@ try:
                     exit() # Exit the exploration script
                 print(f"{OQMD_RAW_DATA_FILE} generated successfully by prerequisite script.")
             except Exception as e_prereq:
-                print(f"Error running fetch_oqmd_data.py: {e_prereq}. Cannot proceed.")
+                print(f"Error running scripts/fetch_oqmd_data.py: {e_prereq}. Cannot proceed.")
                 exit() # Exit the exploration script
         else:
-            print("fetch_oqmd_data.py not found. Cannot generate missing input file {OQMD_RAW_DATA_FILE}. Please ensure it exists.")
+            print("scripts/fetch_oqmd_data.py not found. Cannot generate missing input file {OQMD_RAW_DATA_FILE}. Please ensure it exists.")
             exit() # Exit the exploration script
 
 

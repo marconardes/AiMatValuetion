@@ -6,7 +6,7 @@ import warnings
 from unittest.mock import patch, mock_open, MagicMock, call
 
 # Modules to be tested
-from process_raw_data import process_data
+from scripts.process_raw_data import process_data
 from utils.schema import DATA_SCHEMA
 
 # Define sample raw data for testing
@@ -107,8 +107,8 @@ def mock_config_for_processing(tmp_path):
 # Expected CSV columns based on DATA_SCHEMA (excluding non-CSV fields)
 EXPECTED_CSV_HEADERS_FROM_SCHEMA = [key for key in DATA_SCHEMA.keys() if key not in ['cif_string', 'dos_object_mp']]
 
-@patch('process_raw_data.Structure.from_str')
-@patch('process_raw_data.Dos.from_dict')
+@patch('scripts.process_raw_data.Structure.from_str')
+@patch('scripts.process_raw_data.Dos.from_dict')
 def test_successful_processing_with_mocks(mock_dos_from_dict, mock_structure_from_str, tmp_path, mock_raw_data_file, mock_config_for_processing, capsys):
     """Test basic successful processing with detailed mocks for pymatgen objects."""
 
@@ -170,7 +170,7 @@ def test_successful_processing_with_mocks(mock_dos_from_dict, mock_structure_fro
 
     config_val = mock_config_for_processing(raw_filename=os.path.basename(raw_json_path), output_filename=output_csv_name)
 
-    with patch('process_raw_data.load_config', return_value=config_val):
+    with patch('scripts.process_raw_data.load_config', return_value=config_val):
         mock_csv_writer = MagicMock()
         with patch('csv.DictWriter', return_value=mock_csv_writer):
             process_data()
@@ -212,7 +212,7 @@ def test_missing_input_file(mock_config_for_processing, capsys):
     # Configure to use a non-existent raw file
     config_val = mock_config_for_processing(raw_filename="non_existent_raw.json")
 
-    with patch('process_raw_data.load_config', return_value=config_val):
+    with patch('scripts.process_raw_data.load_config', return_value=config_val):
         # os.path.exists will correctly return False for a file in tmp_path that doesn't exist
         process_data()
 
@@ -222,8 +222,8 @@ def test_missing_input_file(mock_config_for_processing, capsys):
         assert "Successfully processed and saved data" not in captured.out
 
 
-@patch('process_raw_data.Dos.from_dict') # Keep this for DOS part
-@patch('process_raw_data.Structure.from_str') # Mock this for Structure part
+@patch('scripts.process_raw_data.Dos.from_dict') # Keep this for DOS part
+@patch('scripts.process_raw_data.Structure.from_str') # Mock this for Structure part
 def test_pymatgen_cif_parsing_error(mock_structure_from_str, mock_dos_from_dict, tmp_path, mock_raw_data_file, mock_config_for_processing, capsys):
     """Test handling of errors during Structure.from_str (CIF parsing)."""
     raw_data_with_bad_cif = [{
@@ -237,7 +237,7 @@ def test_pymatgen_cif_parsing_error(mock_structure_from_str, mock_dos_from_dict,
     mock_csv_writer = MagicMock()
     config_val = mock_config_for_processing(raw_filename=os.path.basename(raw_json_path))
 
-    with patch('process_raw_data.load_config', return_value=config_val):
+    with patch('scripts.process_raw_data.load_config', return_value=config_val):
         with patch('csv.DictWriter', return_value=mock_csv_writer):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
@@ -252,8 +252,8 @@ def test_pymatgen_cif_parsing_error(mock_structure_from_str, mock_dos_from_dict,
             assert call_args['density_pg'] is None
 
 
-@patch('process_raw_data.Structure.from_str') # Mock Structure for all DOS tests too
-@patch('process_raw_data.Dos.from_dict')
+@patch('scripts.process_raw_data.Structure.from_str') # Mock Structure for all DOS tests too
+@patch('scripts.process_raw_data.Dos.from_dict')
 def test_dos_processing_logic(mock_dos_from_dict, mock_structure_from_str, tmp_path, mock_raw_data_file, mock_config_for_processing):
     """Test various scenarios for DOS processing."""
 
@@ -318,7 +318,7 @@ def test_dos_processing_logic(mock_dos_from_dict, mock_structure_from_str, tmp_p
         mock_csv_writer = MagicMock()
         config_val = mock_config_for_processing(raw_filename=os.path.basename(raw_json_path), output_filename=f"out_dos_{i}.csv")
 
-        with patch('process_raw_data.load_config', return_value=config_val):
+        with patch('scripts.process_raw_data.load_config', return_value=config_val):
             with patch('csv.DictWriter', return_value=mock_csv_writer):
                 with warnings.catch_warnings(record=True) as w_dos:
                     warnings.simplefilter("always")
@@ -339,19 +339,19 @@ def test_dos_processing_logic(mock_dos_from_dict, mock_structure_from_str, tmp_p
 
 # Basic test to check if the script runs without real files if config is empty
 def test_process_data_no_config_runs(capsys):
-    with patch('process_raw_data.load_config', return_value={}):
+    with patch('scripts.process_raw_data.load_config', return_value={}):
         with patch('os.path.exists', return_value=False) as mock_exists:
              process_data()
-             mock_exists.assert_called_once_with("mp_raw_data.json")
+             mock_exists.assert_called_once_with("data/mp_raw_data.json")
              captured = capsys.readouterr()
-             assert "Error: Raw data file 'mp_raw_data.json' not found" in captured.out
+              assert "Error: Raw data file 'data/mp_raw_data.json' not found" in captured.out
 
 # Test with a completely empty raw data file
 def test_process_empty_raw_data_file(tmp_path, mock_raw_data_file, mock_config_for_processing, capsys):
     raw_json_path = mock_raw_data_file([])
 
     config_val = mock_config_for_processing(raw_filename=os.path.basename(raw_json_path))
-    with patch('process_raw_data.load_config', return_value=config_val):
+    with patch('scripts.process_raw_data.load_config', return_value=config_val):
         mock_csv_writer = MagicMock()
         with patch('csv.DictWriter', return_value=mock_csv_writer):
             process_data()

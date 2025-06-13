@@ -2,7 +2,6 @@ import os
 import json
 import warnings
 from utils.config_loader import load_config
-from utils.schema import DATA_SCHEMA # Added
 from mp_api.client import MPRester
 from pymatgen.core import Composition, Structure # Ensure Structure is imported
 
@@ -35,7 +34,7 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
     # Get other parameters from config, with defaults from original script or function arg
     # Retrieve max_total_materials from config, using function arg as ultimate fallback
     max_total_materials_config = fetch_config_params.get('max_total_materials', max_total_materials_arg)
-    output_filename = fetch_config_params.get('output_filename', "mp_raw_data.json") # Default from original script
+    output_filename = fetch_config_params.get('output_filename', "data/mp_raw_data.json") # Default from original script
 
     # Define criteria sets: Prioritize config, then script defaults
     default_criteria_sets = [

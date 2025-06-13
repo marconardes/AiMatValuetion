@@ -2,8 +2,8 @@ import json
 import pandas as pd
 import os
 
-OQMD_RAW_FILE = "oqmd_data_raw.json"
-PROCESSED_OQMD_FILE = "oqmd_processed.csv"
+OQMD_RAW_FILE = "data/oqmd_data_raw.json"
+PROCESSED_OQMD_FILE = "data/oqmd_processed.csv"
 
 def select_best_oqmd_entry(oqmd_records):
     if not oqmd_records:
@@ -44,26 +44,26 @@ def process_oqmd_data():
 
     if not os.path.exists(OQMD_RAW_FILE):
         print(f"ERROR: Raw OQMD data file not found: {OQMD_RAW_FILE}")
-        print("Please run `fetch_oqmd_data.py` first to generate this file.")
+        print("Please run `scripts/fetch_oqmd_data.py` first to generate this file.")
         # Optionally, try to run fetch_oqmd_data.py
-        if os.path.exists("fetch_oqmd_data.py"):
-            print("Attempting to run fetch_oqmd_data.py...")
+        if os.path.exists("scripts/fetch_oqmd_data.py"):
+            print("Attempting to run scripts/fetch_oqmd_data.py...")
             try:
                 # Ensure fetch_oqmd_data.py is executable for the os.system call
-                os.chmod("fetch_oqmd_data.py", 0o755)
-                exit_code = os.system("python fetch_oqmd_data.py") # This will use the current settings in that script
+                os.chmod("scripts/fetch_oqmd_data.py", 0o755)
+                exit_code = os.system("python scripts/fetch_oqmd_data.py") # This will use the current settings in that script
                 if exit_code != 0:
-                    print(f"fetch_oqmd_data.py exited with error code {exit_code}. Cannot proceed.")
+                    print(f"scripts/fetch_oqmd_data.py exited with error code {exit_code}. Cannot proceed.")
                     return
                 if not os.path.exists(OQMD_RAW_FILE): # Check again
                     print(f"{OQMD_RAW_FILE} still not found. Cannot proceed.")
                     return
                 print(f"{OQMD_RAW_FILE} generated.")
             except Exception as e:
-                print(f"Error running fetch_oqmd_data.py: {e}")
+                print(f"Error running scripts/fetch_oqmd_data.py: {e}")
                 return
         else:
-            print("fetch_oqmd_data.py not found. Cannot generate missing input.")
+            print("scripts/fetch_oqmd_data.py not found. Cannot generate missing input.")
             return
 
 

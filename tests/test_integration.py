@@ -8,9 +8,9 @@ import pandas as pd # For reading CSV to verify
 from unittest.mock import patch, MagicMock
 
 # Import main functions from the scripts
-from fetch_mp_data import fetch_data
-from process_raw_data import process_data
-from train_model import train_models
+from scripts.fetch_mp_data import fetch_data
+from scripts.process_raw_data import process_data
+from scripts.train_model import train_models
 
 from utils.config_loader import load_config # To verify config loading if needed, though test will write its own
 
@@ -171,7 +171,7 @@ def mock_mp_rester_for_integration(monkeypatch):
     mock_MPRester_class = MagicMock(name="MockMPResterClass")
     mock_MPRester_class.return_value.__enter__.return_value = mock_mpr_instance
 
-    monkeypatch.setattr("fetch_mp_data.MPRester", mock_MPRester_class)
+    monkeypatch.setattr("scripts.fetch_mp_data.MPRester", mock_MPRester_class)
     return mock_MPRester_class, mock_mpr_instance
 
 
@@ -218,8 +218,8 @@ def test_data_pipeline_integration(integration_test_config, integration_test_pat
 
 
     with patch('utils.config_loader.DEFAULT_CONFIG_PATH', config_file_path):
-        with patch('process_raw_data.Structure.from_str', side_effect=side_effect_structure_from_str) as mock_struct_from_str_proc:
-            with patch('process_raw_data.Dos.from_dict', side_effect=side_effect_dos_from_dict) as mock_dos_from_dict_proc:
+        with patch('scripts.process_raw_data.Structure.from_str', side_effect=side_effect_structure_from_str) as mock_struct_from_str_proc:
+            with patch('scripts.process_raw_data.Dos.from_dict', side_effect=side_effect_dos_from_dict) as mock_dos_from_dict_proc:
                 process_data()
 
     # Assertions for process_data

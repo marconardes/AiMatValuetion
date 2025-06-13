@@ -30,7 +30,7 @@ def train_models():
     else:
         train_config_params = full_config.get('train_model', {})
 
-    csv_file = train_config_params.get('dataset_filename', 'Fe_materials_dataset.csv')
+    csv_file = train_config_params.get('dataset_filename', 'data/Fe_materials_dataset.csv')
     default_test_size = 0.2
     default_random_state = 42
     default_n_estimators = 10 # From original logic when config was introduced
@@ -42,26 +42,26 @@ def train_models():
 
     # Model and preprocessor filenames from config
     default_model_filenames_map = { # Renamed for clarity
-        "dos_at_fermi": "model_dos_at_fermi.joblib",
-        "target_band_gap": "model_target_band_gap.joblib",
-        "target_formation_energy": "model_target_formation_energy.joblib",
-        "target_is_metal": "model_target_is_metal.joblib"
+        "dos_at_fermi": "data/model_dos_at_fermi.joblib",
+        "target_band_gap": "data/model_target_band_gap.joblib",
+        "target_formation_energy": "data/model_target_formation_energy.joblib",
+        "target_is_metal": "data/model_target_is_metal.joblib"
     }
     model_filenames_map = train_config_params.get('models', default_model_filenames_map)
 
     default_preprocessor_filenames_map = { # Renamed for clarity
-        "main": "preprocessor_main.joblib",
-        "dos_at_fermi": "preprocessor_dos_at_fermi.joblib"
+        "main": "data/preprocessor_main.joblib",
+        "dos_at_fermi": "data/preprocessor_dos_at_fermi.joblib"
     }
     preprocessor_filenames_map = train_config_params.get('preprocessors', default_preprocessor_filenames_map)
 
     # Specific filenames from loaded config or defaults
-    preprocessor_main_file = preprocessor_filenames_map.get("main", "preprocessor_main.joblib")
+    preprocessor_main_file = preprocessor_filenames_map.get("main", "data/preprocessor_main.joblib")
 
-    model_dos_file = model_filenames_map.get("dos_at_fermi", "model_dos_at_fermi.joblib")
-    model_band_gap_file = model_filenames_map.get("target_band_gap", "model_target_band_gap.joblib")
-    model_formation_energy_file = model_filenames_map.get("target_formation_energy", "model_target_formation_energy.joblib")
-    model_is_metal_file = model_filenames_map.get("target_is_metal", "model_target_is_metal.joblib")
+    model_dos_file = model_filenames_map.get("dos_at_fermi", "data/model_dos_at_fermi.joblib")
+    model_band_gap_file = model_filenames_map.get("target_band_gap", "data/model_target_band_gap.joblib")
+    model_formation_energy_file = model_filenames_map.get("target_formation_energy", "data/model_target_formation_energy.joblib")
+    model_is_metal_file = model_filenames_map.get("target_is_metal", "data/model_target_is_metal.joblib")
 
 
     if not os.path.exists(csv_file):
@@ -142,7 +142,7 @@ def train_models():
             # but if 'preprocessor_dos_at_fermi.joblib' is meant to be a standalone file for the GUI,
             # then this preprocessor_dos should be fitted and saved separately.
             # The config structure suggests the DOS preprocessor IS saved separately.
-            preprocessor_dos_file = preprocessor_filenames_map.get("dos_at_fermi", "preprocessor_dos_at_fermi.joblib")
+            preprocessor_dos_file = preprocessor_filenames_map.get("dos_at_fermi", "data/preprocessor_dos_at_fermi.joblib")
 
             preprocessor_dos = ColumnTransformer(
                 transformers=[
