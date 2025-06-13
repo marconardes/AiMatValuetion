@@ -5,7 +5,7 @@ import warnings
 from unittest.mock import patch, MagicMock, mock_open, call
 
 # Module to be tested
-from fetch_mp_data import fetch_data
+from scripts.fetch_mp_data import fetch_data
 # from utils.schema import DATA_SCHEMA # Not directly used by fetch_data, but good for reference if creating complex mocks
 
 # --- Mock Data and Fixtures ---
@@ -96,7 +96,7 @@ MOCK_DOS_MP7 = MockDos({"efermi": 0.7, "densities": {"1": [9,10]}, "energies": [
 # --- Test Cases ---
 
 @patch('builtins.open', new_callable=mock_open)
-@patch('fetch_mp_data.MPRester')
+@patch('scripts.fetch_mp_data.MPRester')
 def test_successful_data_fetching(mock_MPRester, mock_file_open, mock_api_key_config, tmp_path):
     """Test successful fetching and saving of data based on criteria."""
 
@@ -134,7 +134,7 @@ def test_successful_data_fetching(mock_MPRester, mock_file_open, mock_api_key_co
     output_filename_in_config = tmp_path / mock_api_key_config["fetch_data"]["output_filename"]
     mock_api_key_config["fetch_data"]["output_filename"] = str(output_filename_in_config)
 
-    with patch('fetch_mp_data.load_config', return_value=mock_api_key_config):
+    with patch('scripts.fetch_mp_data.load_config', return_value=mock_api_key_config):
         fetch_data() # max_total_materials is controlled by config
 
     # Assertions
@@ -183,13 +183,13 @@ def test_successful_data_fetching(mock_MPRester, mock_file_open, mock_api_key_co
     assert written_data[1]['material_id'] == "mp-3" # First binary after filtering by criteria
 
 
-@patch('fetch_mp_data.MPRester')
+@patch('scripts.fetch_mp_data.MPRester')
 def test_api_key_handling(mock_MPRester, mock_no_api_key_config, mock_api_key_config, tmp_path):
     # Case 1: API key from config
     mock_MPRester.reset_mock()
     output_fn_1 = tmp_path / mock_api_key_config["fetch_data"]["output_filename"]
     mock_api_key_config["fetch_data"]["output_filename"] = str(output_fn_1)
-    with patch('fetch_mp_data.load_config', return_value=mock_api_key_config):
+    with patch('scripts.fetch_mp_data.load_config', return_value=mock_api_key_config):
         with patch('builtins.open', mock_open()): # Mock file open to prevent actual write
             fetch_data()
             mock_MPRester.assert_called_with(api_key="TEST_API_KEY_FROM_CONFIG")
@@ -198,7 +198,7 @@ def test_api_key_handling(mock_MPRester, mock_no_api_key_config, mock_api_key_co
     mock_MPRester.reset_mock()
     output_fn_2 = tmp_path / mock_no_api_key_config["fetch_data"]["output_filename"] # ensure unique filename
     mock_no_api_key_config["fetch_data"]["output_filename"] = str(output_fn_2)
-    with patch('fetch_mp_data.load_config', return_value=mock_no_api_key_config):
+    with patch('scripts.fetch_mp_data.load_config', return_value=mock_no_api_key_config):
         with patch.dict(os.environ, {"MP_API_KEY": "TEST_ENV_KEY"}):
             with patch('builtins.open', mock_open()):
                 fetch_data()
@@ -208,7 +208,7 @@ def test_api_key_handling(mock_MPRester, mock_no_api_key_config, mock_api_key_co
     mock_MPRester.reset_mock()
     output_fn_3 = tmp_path / mock_no_api_key_config["fetch_data"]["output_filename"].replace(".json", "_3.json")
     mock_no_api_key_config["fetch_data"]["output_filename"] = str(output_fn_3)
-    with patch('fetch_mp_data.load_config', return_value=mock_no_api_key_config):
+    with patch('scripts.fetch_mp_data.load_config', return_value=mock_no_api_key_config):
         with patch.dict(os.environ, {}, clear=True): # Clear MP_API_KEY from env
              with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
@@ -219,7 +219,7 @@ def test_api_key_handling(mock_MPRester, mock_no_api_key_config, mock_api_key_co
 
 
 @patch('builtins.open', new_callable=mock_open)
-@patch('fetch_mp_data.MPRester')
+@patch('scripts.fetch_mp_data.MPRester')
 def test_api_error_handling(mock_MPRester, mock_file_open, mock_api_key_config, tmp_path, capsys):
     """Test graceful handling of API errors."""
     mock_mpr_api = mock_MPRester.return_value.__enter__.return_value
@@ -228,7 +228,7 @@ def test_api_error_handling(mock_MPRester, mock_file_open, mock_api_key_config, 
     output_filename = tmp_path / mock_api_key_config["fetch_data"]["output_filename"]
     mock_api_key_config["fetch_data"]["output_filename"] = str(output_filename)
 
-    with patch('fetch_mp_data.load_config', return_value=mock_api_key_config):
+    with patch('scripts.fetch_mp_data.load_config', return_value=mock_api_key_config):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             fetch_data()
@@ -243,7 +243,7 @@ def test_api_error_handling(mock_MPRester, mock_file_open, mock_api_key_config, 
 
 
 @patch('builtins.open', new_callable=mock_open)
-@patch('fetch_mp_data.MPRester')
+@patch('scripts.fetch_mp_data.MPRester')
 def test_empty_api_response(mock_MPRester, mock_file_open, mock_api_key_config, tmp_path, capsys):
     """Test handling of empty list from API."""
     mock_mpr_api = mock_MPRester.return_value.__enter__.return_value
@@ -252,7 +252,7 @@ def test_empty_api_response(mock_MPRester, mock_file_open, mock_api_key_config, 
     output_filename = tmp_path / mock_api_key_config["fetch_data"]["output_filename"]
     mock_api_key_config["fetch_data"]["output_filename"] = str(output_filename)
 
-    with patch('fetch_mp_data.load_config', return_value=mock_api_key_config):
+    with patch('scripts.fetch_mp_data.load_config', return_value=mock_api_key_config):
         fetch_data()
 
     # Script should exit before attempting to save if summary search returns empty.
@@ -269,7 +269,7 @@ def test_empty_api_response(mock_MPRester, mock_file_open, mock_api_key_config, 
 
 # Test for max_total_materials limit
 @patch('builtins.open', new_callable=mock_open)
-@patch('fetch_mp_data.MPRester')
+@patch('scripts.fetch_mp_data.MPRester')
 def test_max_total_materials_limit(mock_MPRester, mock_file_open, mock_api_key_config, tmp_path):
     mock_mpr_api = mock_MPRester.return_value.__enter__.return_value
 
@@ -294,7 +294,7 @@ def test_max_total_materials_limit(mock_MPRester, mock_file_open, mock_api_key_c
     mock_mpr_api.get_structure_by_material_id.side_effect = lambda mid: MockStructure(f"cif_{mid}")
     mock_mpr_api.get_dos_by_material_id.side_effect = lambda mid: MockDos({"efermi":0})
 
-    with patch('fetch_mp_data.load_config', return_value=test_config):
+    with patch('scripts.fetch_mp_data.load_config', return_value=test_config):
         fetch_data()
 
     # Should fetch mp-1 (mono, 1st set, count=1)

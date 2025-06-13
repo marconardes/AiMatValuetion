@@ -22,11 +22,11 @@ from pymatgen.core.periodic_table import Element
 # data processing step (e.g., in `process_oqmd_data.py`).
 
 # Constants
-SUPERCON_PROCESSED_FILE = "supercon_processed.csv" # Assumes this file exists from previous step
+SUPERCON_PROCESSED_FILE = "data/supercon_processed.csv" # Assumes this file exists from previous step
 OQMD_BASE_URL = "http://oqmd.org/oqmdapi/formationenergy"
 REQUEST_FIELDS = "name,entry_id,spacegroup,ntypes,band_gap,delta_e,stability,prototype,unit_cell,sites,icsd_id"
 REQUEST_DELAY = 1 # seconds, to be polite to the API
-OQMD_OUTPUT_FILE = "oqmd_data_raw.json"
+OQMD_OUTPUT_FILE = "data/oqmd_data_raw.json"
 LIMIT_COMPOSITIONS_TO_QUERY = 7 # TEMPORARY OVERRIDE FOR SUBTASK RUN
 
 def get_unique_compositions(file_path):
@@ -35,23 +35,23 @@ def get_unique_compositions(file_path):
         print(f"ERROR: File not found: {file_path}")
         # Attempt to run the prerequisite script if supercon_processed.csv is missing
         # This makes the script more robust if run standalone after a git pull for example
-        print(f"Attempting to generate {file_path} by running process_supercon_raw.py...")
-        if os.path.exists("process_supercon_raw.py"):
+        print(f"Attempting to generate {file_path} by running scripts/process_supercon_raw.py...")
+        if os.path.exists("scripts/process_supercon_raw.py"):
             try:
-                run_prereq_script_command = "python process_supercon_raw.py"
+                run_prereq_script_command = "python scripts/process_supercon_raw.py"
                 exit_code = os.system(run_prereq_script_command)
                 if exit_code != 0:
-                    print(f"process_supercon_raw.py failed with exit code {exit_code}. Cannot proceed.")
+                    print(f"scripts/process_supercon_raw.py failed with exit code {exit_code}. Cannot proceed.")
                     return []
                 if not os.path.exists(file_path): # Check again
                     print(f"{file_path} still not found after running prerequisite script. Cannot proceed.")
                     return []
                 print(f"{file_path} generated successfully.")
             except Exception as e:
-                print(f"Error running process_supercon_raw.py: {e}. Cannot proceed.")
+                print(f"Error running scripts/process_supercon_raw.py: {e}. Cannot proceed.")
                 return []
         else:
-            print("process_supercon_raw.py not found. Cannot generate missing input file. Please ensure it exists.")
+            print("scripts/process_supercon_raw.py not found. Cannot generate missing input file. Please ensure it exists.")
             return []
 
 

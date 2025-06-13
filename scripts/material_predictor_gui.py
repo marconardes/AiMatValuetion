@@ -352,7 +352,7 @@ class ManualEntryTab(ttk.Frame):
 
         # Get filename from app's config (passed to ManualEntryTab or reloaded)
         # Assuming self.app_config holds the 'gui' part of the main config
-        csv_filename = self.app_config.get('manual_entry_csv_filename', "Fe_materials_dataset.csv")
+        csv_filename = self.app_config.get('manual_entry_csv_filename', "data/Fe_materials_dataset.csv")
 
         file_exists = os.path.isfile(csv_filename)
         try:
@@ -408,12 +408,12 @@ class Application(tk.Tk):
 
         # Default model filenames if not found in config
         default_models_to_load_paths = {
-            "preprocessor_main": "preprocessor_main.joblib",
-            "preprocessor_dos": "preprocessor_dos_at_fermi.joblib",
-            "model_is_metal": "model_target_is_metal.joblib",
-            "model_band_gap": "model_target_band_gap.joblib",
-            "model_formation_energy": "model_target_formation_energy.joblib",
-            "model_dos_at_fermi": "model_dos_at_fermi.joblib"
+            "preprocessor_main": "data/preprocessor_main.joblib",
+            "preprocessor_dos": "data/preprocessor_dos_at_fermi.joblib",
+            "model_is_metal": "data/model_target_is_metal.joblib",
+            "model_band_gap": "data/model_target_band_gap.joblib",
+            "model_formation_energy": "data/model_target_formation_energy.joblib",
+            "model_dos_at_fermi": "data/model_dos_at_fermi.joblib"
         }
         # Get the dictionary mapping attribute name (e.g., "preprocessor_main") to filename
         models_config_paths = self.gui_config.get('models_to_load', default_models_to_load_paths)

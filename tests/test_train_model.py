@@ -6,7 +6,7 @@ import joblib
 from unittest.mock import patch, MagicMock, mock_open, call
 
 # Module to be tested
-from train_model import train_models # Assuming train_model.py is in the root
+from scripts.train_model import train_models # Assuming train_model.py is in the root
 from utils.schema import DATA_SCHEMA # To help structure mock data
 
 # --- Test Data and Fixtures ---
@@ -84,9 +84,9 @@ def mock_config_for_training(mock_input_csv_path, tmp_path):
 
 # --- Test Cases ---
 
-@patch('train_model.joblib.dump')
-@patch('train_model.RandomForestRegressor')
-@patch('train_model.RandomForestClassifier')
+@patch('scripts.train_model.joblib.dump')
+@patch('scripts.train_model.RandomForestRegressor')
+@patch('scripts.train_model.RandomForestClassifier')
 def test_train_models_successful_execution(mock_classifier, mock_regressor, mock_joblib_dump,
                                            mock_config_for_training, sample_dataframe, capsys):
     """
@@ -117,9 +117,9 @@ def test_train_models_successful_execution(mock_classifier, mock_regressor, mock
 
 
     # Mock pd.read_csv to return our sample DataFrame
-    with patch('train_model.pd.read_csv', return_value=sample_dataframe):
+    with patch('scripts.train_model.pd.read_csv', return_value=sample_dataframe):
         # Mock load_config to return our controlled config
-        with patch('train_model.load_config', return_value=mock_config_for_training):
+        with patch('scripts.train_model.load_config', return_value=mock_config_for_training):
             train_models()
 
             # --- Assertions for preprocessor saving ---
@@ -204,7 +204,7 @@ def test_train_models_missing_input_file(mock_config_for_training, capsys):
     config_val = mock_config_for_training.copy()
     config_val['train_model']['dataset_filename'] = "non_existent_dataset.csv"
 
-    with patch('train_model.load_config', return_value=config_val):
+    with patch('scripts.train_model.load_config', return_value=config_val):
         with patch('os.path.exists', return_value=False) as mock_os_exists:
             train_models()
             mock_os_exists.assert_called_with("non_existent_dataset.csv")
@@ -216,17 +216,17 @@ def test_train_models_missing_input_file(mock_config_for_training, capsys):
 def test_train_models_empty_input_dataframe(mock_config_for_training, capsys):
     """Test behavior when the input DataFrame is empty."""
     empty_df = pd.DataFrame()
-    with patch('train_model.load_config', return_value=mock_config_for_training):
-        with patch('train_model.pd.read_csv', return_value=empty_df):
+    with patch('scripts.train_model.load_config', return_value=mock_config_for_training):
+        with patch('scripts.train_model.pd.read_csv', return_value=empty_df):
             with patch('os.path.exists', return_value=True): # Ensure it passes the file check
                 train_models()
                 captured = capsys.readouterr()
                 assert "Error: Dataset is empty." in captured.out # Adjusted to match current error message in train_model.py
                 assert "Model Training Completed" not in captured.out
 
-@patch('train_model.joblib.dump')
-@patch('train_model.RandomForestRegressor') # Mock the class
-@patch('train_model.RandomForestClassifier') # Mock the class
+@patch('scripts.train_model.joblib.dump')
+@patch('scripts.train_model.RandomForestRegressor') # Mock the class
+@patch('scripts.train_model.RandomForestClassifier') # Mock the class
 def test_dos_model_training_path(mock_classifier_cls, mock_regressor_cls, mock_joblib_dump,
                                  mock_config_for_training, sample_dataframe, capsys):
     """Test the specific path for training the DOS model (metals only)."""
@@ -255,8 +255,8 @@ def test_dos_model_training_path(mock_classifier_cls, mock_regressor_cls, mock_j
     mock_classifier_cls.side_effect = mock_classifier_instance_for_dos_test
 
 
-    with patch('train_model.pd.read_csv', return_value=sample_dataframe):
-        with patch('train_model.load_config', return_value=mock_config_for_training):
+    with patch('scripts.train_model.pd.read_csv', return_value=sample_dataframe):
+        with patch('scripts.train_model.load_config', return_value=mock_config_for_training):
             # We are NOT mocking Pipeline.fit here, so it will execute
             train_models()
 

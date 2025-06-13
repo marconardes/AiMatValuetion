@@ -2,7 +2,7 @@ import pandas as pd
 import os
 
 RAW_FILE_PATH = "supercon_data/raw.tsv"
-PROCESSED_FILE_PATH = "supercon_processed.csv"
+PROCESSED_FILE_PATH = "data/supercon_processed.csv"
 
 def process_supercon_data():
     print(f"Starting processing of {RAW_FILE_PATH}...")

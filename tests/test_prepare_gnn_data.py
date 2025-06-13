@@ -10,7 +10,7 @@ from torch_geometric.data import Data
 # Add project root to sys.path to allow direct import of prepare_gnn_data
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import prepare_gnn_data
+from scripts import prepare_gnn_data
 # from utils.config_loader import load_config # Not strictly needed for test if prepare_gnn_data handles path
 
 # CIF string for Silicon - must be properly escaped for JSON
