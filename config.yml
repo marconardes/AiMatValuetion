@@ -1,5 +1,5 @@
 # General settings
-mp_api_key: "YOUR_MP_API_KEY"  # User should replace this
+mp_api_key: "g8GFDzZEV7QKxEbuHRZcLFL67f22mgVr"  # User should replace this
 
 # fetch_mp_data.py settings
 fetch_data:

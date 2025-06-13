@@ -341,10 +341,10 @@ def test_dos_processing_logic(mock_dos_from_dict, mock_structure_from_str, tmp_p
 def test_process_data_no_config_runs(capsys):
     with patch('scripts.process_raw_data.load_config', return_value={}):
         with patch('os.path.exists', return_value=False) as mock_exists:
-             process_data()
-             mock_exists.assert_called_once_with("data/mp_raw_data.json")
-             captured = capsys.readouterr()
-              assert "Error: Raw data file 'data/mp_raw_data.json' not found" in captured.out
+            process_data()
+            mock_exists.assert_called_once_with("data/mp_raw_data.json")
+            captured = capsys.readouterr()
+            assert "Error: Raw data file 'data/mp_raw_data.json' not found" in captured.out
 
 # Test with a completely empty raw data file
 def test_process_empty_raw_data_file(tmp_path, mock_raw_data_file, mock_config_for_processing, capsys):
