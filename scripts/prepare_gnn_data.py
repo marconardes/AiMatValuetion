@@ -1,12 +1,14 @@
 import json
 import os
 import warnings
+import pandas as pd
 import math
 
 import torch
 from torch_geometric.data import Data
 from sklearn.model_selection import train_test_split
 from pymatgen.core.structure import Structure
+from pymatgen.core.lattice import Lattice # Added for Lattice creation
 
 from utils.config_loader import load_config
 from utils.graph_utils import structure_to_graph # Assuming this will be used or adapted
@@ -29,7 +31,7 @@ def create_graph_dataset(config_path='config.yml'):
         return
 
     prepare_config = config.get('prepare_gnn_data', {})
-    raw_data_path = prepare_config.get('raw_data_filename', 'data/mp_raw_data.json')
+    raw_data_path = prepare_config.get('processed_oqmd_csv_filename', 'data/oqmd_processed.csv') # Updated key and default path
     processed_graphs_path = prepare_config.get('processed_graphs_filename', 'data/processed_graphs.pt')
     train_graphs_path = prepare_config.get('train_graphs_filename', 'data/train_graphs.pt')
     val_graphs_path = prepare_config.get('val_graphs_filename', 'data/val_graphs.pt')
@@ -55,40 +57,98 @@ def create_graph_dataset(config_path='config.yml'):
         return
 
     try:
-        with open(raw_data_path, 'r') as f:
-            raw_materials_data = json.load(f)
+        # Load data using pandas for CSV files
+        raw_materials_data = pd.read_csv(raw_data_path)
         print(f"Loaded {len(raw_materials_data)} raw material entries from {raw_data_path}.")
-    except json.JSONDecodeError as e:
-        print(f"Error decoding JSON from {raw_data_path}: {e}")
+    except FileNotFoundError:
+        print(f"Error: The file {raw_data_path} was not found.")
+        return
+    except pd.errors.EmptyDataError:
+        print(f"Error: The file {raw_data_path} is empty.")
+        return
+    except pd.errors.ParserError:
+        print(f"Error: Could not parse {raw_data_path}. Check CSV format.")
         return
     except Exception as e:
-        print(f"An unexpected error occurred while loading {raw_data_path}: {e}")
+        print(f"An unexpected error occurred while loading {raw_data_path} with pandas: {e}")
         return
 
     all_graph_data = []
     processed_count = 0
-    skipped_missing_cif = 0
-    skipped_cif_parse_error = 0
+    # Old CIF related counters - will be replaced or updated
+    # skipped_missing_cif = 0
+    # skipped_cif_parse_error = 0
+    skipped_missing_structure_json = 0
+    skipped_structure_json_parse_error = 0
+    skipped_structure_creation_error = 0
     skipped_missing_targets = 0
     skipped_processing_error = 0
 
     # 3. Process each material into a torch_geometric.data.Data object
-    for i, material_doc in enumerate(raw_materials_data):
-        material_id = material_doc.get('material_id', f"Unknown_ID_{i+1}")
+    # Iterate over DataFrame rows if using pandas
+    for i, material_doc in raw_materials_data.iterrows(): # Changed for pandas DataFrame
+        material_id = material_doc.get('material_id', f"Unknown_ID_{i+1}") # .get still works for Series
         print(f"Processing material {i+1}/{len(raw_materials_data)}: {material_id}")
 
-        cif_string = material_doc.get('cif') # Corrected key from 'cif_string' to 'cif' based on common usage
-        if not cif_string:
-            warnings.warn(f"Skipping material {material_id} due to missing CIF string.")
-            skipped_missing_cif += 1
+        # --- Structure Reconstruction from JSON ---
+        oqmd_unit_cell_json = material_doc.get('oqmd_unit_cell_json')
+        oqmd_sites_json = material_doc.get('oqmd_sites_json')
+
+        if pd.isna(oqmd_unit_cell_json) or not oqmd_unit_cell_json or \
+           pd.isna(oqmd_sites_json) or not oqmd_sites_json:
+            warnings.warn(f"Skipping material {material_id} due to missing oqmd_unit_cell_json or oqmd_sites_json.")
+            skipped_missing_structure_json += 1
             continue
 
+        struct = None # Initialize struct to None
         try:
-            struct = Structure.from_str(cif_string, fmt="cif")
-        except Exception as e:
-            warnings.warn(f"Error parsing CIF for {material_id}: {e}. Skipping.")
-            skipped_cif_parse_error += 1
+            # Parse unit cell parameters
+            lattice_params = json.loads(oqmd_unit_cell_json)
+            # Ensure correct number of parameters for Lattice.from_parameters
+            if len(lattice_params) != 6:
+                raise ValueError(f"Lattice parameters for {material_id} are not of length 6 (a,b,c,alpha,beta,gamma). Found: {lattice_params}")
+            lattice = Lattice.from_parameters(*lattice_params)
+
+            # Parse sites
+            sites_data = json.loads(oqmd_sites_json)
+            species_list = []
+            coords_list = []
+            for site_info in sites_data:
+                # Example site_info: {"species": [{"element": "Li", "occu": 1.0}], "xyz": [0.0, 0.0, 0.0]}
+                # Adapt based on actual structure of 'species' and 'xyz' in your JSON
+                if not isinstance(site_info.get('species'), list) or not site_info['species']:
+                     raise ValueError(f"Invalid or missing species data for a site in {material_id}.")
+                # Assuming simple case: one element per species entry, full occupancy
+                # For more complex cases (e.g. disordered structures), this needs adjustment
+                species_str = site_info['species'][0]['element'] # Take the element string
+                species_list.append(species_str)
+                coords_list.append(site_info['xyz'])
+
+            if not species_list or not coords_list:
+                raise ValueError(f"No species or coordinates extracted for {material_id}.")
+
+            struct = Structure(lattice, species_list, coords_list, coords_are_cartesian=False)
+
+        except json.JSONDecodeError as e:
+            warnings.warn(f"Error decoding JSON for structure (cell or sites) for {material_id}: {e}. Skipping.")
+            skipped_structure_json_parse_error += 1
             continue
+        except ValueError as ve: # Catch ValueErrors from lattice/site processing
+            warnings.warn(f"Error processing structure JSON data for {material_id}: {ve}. Skipping.")
+            skipped_structure_json_parse_error += 1 # Or a more specific counter if needed
+            continue
+        except Exception as e: # Catch-all for other errors during Structure creation
+            warnings.warn(f"Error creating Pymatgen Structure for {material_id} from JSON: {e}. Skipping.")
+            skipped_structure_creation_error += 1
+            continue
+
+        if struct is None: # Should be caught by earlier continues, but as a safeguard
+            warnings.warn(f"Structure object not created for {material_id}, reason unknown (should have been caught). Skipping.")
+            # This might indicate a logic flaw if reached.
+            skipped_structure_creation_error +=1 # Or a generic error counter
+            continue
+
+        # --- End Structure Reconstruction ---
 
         try:
             graph_dict = structure_to_graph(struct) # This function needs to exist in utils.graph_utils
@@ -137,20 +197,45 @@ def create_graph_dataset(config_path='config.yml'):
                     edge_attr = torch.empty((edge_index.shape[1], 0), dtype=torch.float) # Assuming 0 edge features if not present
 
             # --- Define Target Properties (y) ---
-            target_band_gap = material_doc.get('band_gap_mp')
-            target_formation_energy = material_doc.get('formation_energy_per_atom_mp')
+            # Get raw target values using new keys
+            target_band_gap = material_doc.get('oqmd_band_gap')
+            target_formation_energy = material_doc.get('oqmd_delta_e') # This is total energy
 
+            # Normalize formation energy (oqmd_delta_e) by number of sites
+            if target_formation_energy is not None: # Only proceed if it's not already None
+                try:
+                    # Attempt to convert to float here to do arithmetic
+                    formation_energy_float = float(target_formation_energy)
+                    num_sites = struct.num_sites # struct must be successfully created at this point
+                    if num_sites > 0:
+                        target_formation_energy = formation_energy_float / num_sites
+                    elif num_sites == 0 and formation_energy_float != 0: # Avoid division by zero if num_sites is 0
+                        warnings.warn(f"Material {material_id} has 0 sites but non-zero formation energy {formation_energy_float}. Skipping target normalization. Check data integrity.")
+                        # Optionally, skip this material by setting targets to None or continue with unnormalized energy
+                        # For now, we'll let it pass to the None check below, or fail at float conversion if it was a non-numeric string
+                    # If num_sites is 0 and formation_energy_float is 0, it can proceed, will be [bg, 0.0]
+                except ValueError:
+                    # If float conversion fails here, it will be caught again below.
+                    # This can happen if target_formation_energy is a string like "N/A"
+                    pass # Let the None check and subsequent float conversion handle this comprehensively
+                except Exception as e: # Catch any other unexpected error during normalization
+                    warnings.warn(f"Error normalizing formation energy for {material_id}: {e}. Proceeding with potentially unnormalized value.")
+                    # This will likely cause an issue later if target_formation_energy is not a number.
+
+            # Check if either target is missing after attempting normalization for formation energy
             if target_band_gap is None or target_formation_energy is None:
-                warnings.warn(f"Skipping material {material_id} due to missing target values (band_gap_mp or formation_energy_per_atom_mp).")
+                warnings.warn(f"Skipping material {material_id} due to missing target values (oqmd_band_gap or oqmd_delta_e after potential normalization).")
                 skipped_missing_targets += 1
                 continue
 
             # Ensure targets are numerical and not strings like "N/A"
             try:
+                # target_formation_energy might already be float if normalization occurred
                 targets = [float(target_band_gap), float(target_formation_energy)]
                 y = torch.tensor([targets], dtype=torch.float)
             except ValueError:
-                warnings.warn(f"Skipping material {material_id} due to non-numerical target values.")
+                # This catches if band_gap was non-numeric, or if formation_energy was non-numeric and normalization was skipped/failed
+                warnings.warn(f"Skipping material {material_id} due to non-numerical target values after processing.")
                 skipped_missing_targets += 1
                 continue
 
@@ -171,10 +256,11 @@ def create_graph_dataset(config_path='config.yml'):
     print("\n--- Processing Summary ---")
     print(f"Total raw material entries: {len(raw_materials_data)}")
     print(f"Successfully processed into graph objects: {processed_count}")
-    print(f"Skipped due to missing CIF string: {skipped_missing_cif}")
-    print(f"Skipped due to CIF parsing error: {skipped_cif_parse_error}")
+    print(f"Skipped due to missing structure JSON (cell or sites): {skipped_missing_structure_json}")
+    print(f"Skipped due to error parsing structure JSON (cell or sites): {skipped_structure_json_parse_error}")
+    print(f"Skipped due to error creating Pymatgen Structure object: {skipped_structure_creation_error}")
     print(f"Skipped due to missing target properties: {skipped_missing_targets}")
-    print(f"Skipped due to other processing errors (features, etc.): {skipped_processing_error}")
+    print(f"Skipped due to other processing errors (graph conversion, features, etc.): {skipped_processing_error}")
 
     if not all_graph_data:
         print("No graph data was successfully processed. Exiting.")
