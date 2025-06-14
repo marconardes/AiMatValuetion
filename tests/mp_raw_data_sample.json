@@ -1,0 +1,51 @@
+{
+  "ValidEntryCu": {
+    "material_id": "mp-123",
+    "cif_string_mp": "CIF_STRING_FOR_Cu",
+    "band_gap": 1.0,
+    "formation_energy_per_atom": -0.5,
+    "dos_object_mp": {
+      "efermi": 0.0,
+      "energies": [-1.0, 0.0, 1.0],
+      "densities": {"1": [0.1, 0.2, 0.3]},
+      "@module": "pymatgen.electronic_structure.dos",
+      "@class": "CompleteDos"
+    },
+    "some_other_mp_field": "value1"
+  },
+  "NoneEntryFe": null,
+  "MissingCifBaKFeAs": {
+    "material_id": "mp-456",
+    "cif_string_mp": null,
+    "band_gap": 0.0,
+    "formation_energy_per_atom": -1.2,
+    "dos_object_mp": {
+      "efermi": 0.5,
+      "energies": [-0.5, 0.5, 1.5],
+      "densities": {"1": [0.4, 0.5, 0.6]},
+      "@module": "pymatgen.electronic_structure.dos",
+      "@class": "CompleteDos"
+    },
+    "another_field": "value2"
+  },
+  "MissingDosSi": {
+    "material_id": "mp-789",
+    "cif_string_mp": "CIF_STRING_FOR_Si",
+    "band_gap": 0.5,
+    "formation_energy_per_atom": -0.8,
+    "dos_object_mp": null,
+    "yet_another_field": "value3"
+  },
+  "ValidEntryNoMaterialId": {
+    "cif_string_mp": "CIF_STRING_FOR_NoMatId",
+    "band_gap": 0.1,
+    "formation_energy_per_atom": -0.2,
+    "dos_object_mp": {
+      "efermi": 0.0,
+      "energies": [-1.0, 0.0, 1.0],
+      "densities": {"1": [0.1, 0.2, 0.3]},
+      "@module": "pymatgen.electronic_structure.dos",
+      "@class": "CompleteDos"
+    }
+  }
+}

@@ -4,6 +4,7 @@
 # and some derived properties. It's used as a reference in fetching and processing stages.
 DATA_SCHEMA = {
     "material_id": "Materials Project ID (e.g., mp-123)",
+    "supercon_composition": "Original SuperCon composition string (e.g., 'Ba0.6K0.4Fe2As2')",
     "cif_string": "Crystallographic Information File as a string",
     "band_gap_mp": "Band Gap (eV) directly from MP",
     "formation_energy_per_atom_mp": "Formation Energy (eV/atom) directly from MP",
