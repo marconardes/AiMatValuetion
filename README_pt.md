@@ -148,6 +148,33 @@ A estratégia de aquisição de dados baseia-se em papéis específicos para cad
 
 Este projeto inclui o OracleNet, um modelo de Rede Neural de Grafos (GNN) projetado para prever propriedades de materiais. O GNN utiliza estruturas de materiais representadas como grafos (onde os nós são átomos e as arestas são ligações/conexões) e aprende a prever propriedades alvo.
 
+#### Guia Rápido para Execução (Fase II - OracleNet)
+
+Para executar o fluxo de busca de dados, preparação de dados e treinamento do modelo GNN OracleNet (correspondente à Fase II do Roadmap), siga os passos abaixo. Certifique-se de que o arquivo `config.yml` está corretamente configurado, pois todos os scripts dependem dele para seus parâmetros.
+
+1.  **Buscar Dados da OQMD (Opcional, se necessário como entrada para GNN):**
+    Este script busca dados de materiais da base de dados OQMD. A configuração para este script, incluindo os critérios de busca e o nome do arquivo de saída (geralmente um arquivo JSON), é gerenciada em `config.yml` (por exemplo, na seção `fetch_oqmd_data`). Este passo é crucial se os dados da OQMD são a fonte primária para a preparação dos dados da GNN.
+
+    ```bash
+    python scripts/fetch_oqmd_data.py
+    ```
+
+2.  **Preparar os Dados para a GNN:**
+    Este script processa os dados brutos (obtidos de fontes como OQMD através do script anterior, ou outras fontes conforme definido em `config.yml`, seção `prepare_gnn_data`, subchave `raw_data_filename`) e os converte em representações de grafo que a GNN pode utilizar. Os grafos processados são salvos em arquivos `.pt`.
+
+    ```bash
+    python scripts/prepare_gnn_data.py
+    ```
+
+3.  **Treinar o Modelo GNN OracleNet:**
+    Após a preparação dos dados, este script carrega os grafos de treinamento e validação para treinar o modelo OracleNet GNN. As configurações de treinamento (como taxa de aprendizado, épocas, etc.) e o caminho para salvar o modelo treinado são definidos em `config.yml` (seção `gnn_settings`).
+
+    ```bash
+    python scripts/train_gnn_model.py
+    ```
+
+Após a execução bem-sucedida desses comandos, você terá os dados brutos buscados (se aplicável), um conjunto de dados processado para a GNN e um modelo GNN treinado (`oracle_net_gnn.pth` por padrão, ou conforme especificado em `config.yml`).
+
 #### Arquitetura do Modelo
 
 O `OracleNetGNN` (definido em `models/gnn_oracle_net.py`) é uma Rede Neural Convolucional de Grafos (GCN) construída usando PyTorch Geometric. Sua arquitetura é projetada para processar dados de materiais baseados em grafos e prever uma única propriedade numérica.

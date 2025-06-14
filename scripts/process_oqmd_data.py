@@ -5,39 +5,75 @@ import os
 OQMD_RAW_FILE = "data/oqmd_data_raw.json"
 PROCESSED_OQMD_FILE = "data/oqmd_processed.csv"
 
+# Helper function to validate structural data within an OQMD record
+def is_structural_data_valid(record):
+    """
+    Checks if an OQMD record contains potentially valid unit_cell and sites data.
+    """
+    if record is None:
+        return False
+
+    unit_cell_data = record.get('unit_cell')
+    sites_data = record.get('sites')
+
+    # Check unit_cell
+    if not isinstance(unit_cell_data, list) or len(unit_cell_data) != 6:
+        return False
+    # Ensure all elements in unit_cell_data are numbers
+    if not all(isinstance(x, (int, float)) for x in unit_cell_data):
+        return False
+
+    # Check sites: must be a non-empty list of dictionaries
+    if not isinstance(sites_data, list) or not sites_data:
+        return False
+
+    for site in sites_data:
+        if not isinstance(site, dict):
+            return False
+        # Check for mandatory keys 'species' and 'xyz'
+        if 'species' not in site or 'xyz' not in site:
+            return False
+        # Check 'xyz': must be a list of 3 numbers
+        if not isinstance(site['xyz'], list) or len(site['xyz']) != 3:
+            return False
+        if not all(isinstance(x, (int, float)) for x in site['xyz']):
+            return False
+        # Check 'species': must be a non-empty list of dictionaries
+        if not isinstance(site['species'], list) or not site['species']:
+            return False
+        # Check the first entry in 'species' list: must be a dict and have 'element' key
+        first_species_info = site['species'][0]
+        if not isinstance(first_species_info, dict) or 'element' not in first_species_info:
+            return False
+    return True
+
 def select_best_oqmd_entry(oqmd_records):
     if not oqmd_records:
         return None
 
-    # Filter out records that might be missing critical data for selection
-    # For example, ensure 'delta_e' and 'stability' can be accessed or default them
-    valid_records = []
+    structurally_valid_records = []
     for record in oqmd_records:
-        try:
-            # Ensure essential keys for sorting exist, can be None if that's acceptable for sorting logic
-            record.get('delta_e')
-            record.get('stability')
-            valid_records.append(record)
-        except AttributeError: # If a record isn't a dict, skip it
+        if not isinstance(record, dict): # Ensure record itself is a dict
             print(f"Warning: Skipping non-dictionary record in OQMD data: {str(record)[:100]}")
             continue
+        if is_structural_data_valid(record): # Use the new helper function
+            structurally_valid_records.append(record)
+        # else: # Optional: log why a record was deemed structurally invalid
+            # print(f"Debug: Record {record.get('entry_id', 'N/A')} ({record.get('name', 'N/A')}) from original list was skipped due to invalid structural data.")
 
-    if not valid_records:
+
+    if not structurally_valid_records:
+        # print("Debug: No structurally valid records found after filtering.") # Optional debug
         return None
 
-    # Sort by 'delta_e' (formation energy), then by 'stability' (hull distance)
-    # Lower delta_e is generally more stable. Lower (closer to zero or more negative) stability is better.
-    # Handle cases where these keys might be missing or are None by providing a default for sorting
-    # A large number for None delta_e/stability will push them to the end of the sort (less preferred)
     infinity = float('inf')
-
-    valid_records.sort(key=lambda x: (
+    structurally_valid_records.sort(key=lambda x: (
         x.get('delta_e', infinity) if x.get('delta_e') is not None else infinity,
         x.get('stability', infinity) if x.get('stability') is not None else infinity,
-        x.get('entry_id', 0) # As a final tie-breaker, though less physically meaningful
+        x.get('entry_id', 0)
     ))
 
-    return valid_records[0]
+    return structurally_valid_records[0]
 
 def process_oqmd_data():
     print(f"Starting processing of {OQMD_RAW_FILE}...")
