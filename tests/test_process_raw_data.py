@@ -415,6 +415,10 @@ def test_process_data_with_new_format(m_dos_from_dict, m_struct_from_str, m_stru
         "ValidEntryNoMaterialId": { # Test fallback for material_id
             "cif_string_mp": "CIF_NoMatId", "band_gap": 0.1, "formation_energy_per_atom": -0.2,
             "dos_object_mp": {"efermi": 0.0, "energies": [-1,0,1], "densities": {"1":[0.1,0.2,0.3]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"}
+        },
+        "EfermiOutOfRange": {
+            "material_id": "mp-eout", "cif_string_mp": "CIF_Eout", "band_gap": 0.1, "formation_energy_per_atom": -0.3,
+            "dos_object_mp": {"efermi": 5.0, "energies": [-1,0,1], "densities": {"1":[0.1,0.2,0.3]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"}
         }
     }
     raw_json_path = mock_raw_dict_data_file(sample_input_dict, filename="test_sample_new_format.json")
@@ -460,6 +464,10 @@ def test_process_data_with_new_format(m_dos_from_dict, m_struct_from_str, m_stru
         elif dos_dict_arg.get('efermi') == 0.5: # For "MissingCifBaKFeAs"
             m = MagicMock(name="DosMockBaKFeAs")
             m.efermi = 0.5; m.energies = [-0.5,0.5,1.5]; m.get_dos_at_fermi.return_value = 0.456
+            return m
+        elif dos_dict_arg.get('efermi') == 5.0: # For "EfermiOutOfRange"
+            m = MagicMock(name="DosMockEfermiOutOfRange")
+            m.efermi = 5.0; m.energies = [-1,0,1]; m.get_dos_at_fermi.return_value = 0.0 # Actual return if called, though script logic might prevent call
             return m
         return MagicMock(spec=True, name="DefaultDosMockInNewTest") # Default
     m_dos_from_dict.side_effect = dos_from_dict_side_effect
@@ -523,6 +531,15 @@ def test_process_data_with_new_format(m_dos_from_dict, m_struct_from_str, m_stru
         assert no_matid_entry['dos_at_fermi'] == "0.123"
         assert no_matid_entry['is_metal'] == "False" # band_gap 0.1
 
+        # Entry 5: EfermiOutOfRange
+        eout_entry = next(r for r in results if r['supercon_composition'] == "EfermiOutOfRange")
+        assert eout_entry['material_id'] == "mp-eout"
+        assert eout_entry['band_gap_mp'] == "0.1"
+        assert eout_entry['formation_energy_per_atom_mp'] == "-0.3"
+        assert eout_entry['dos_at_fermi'] == "0.0" # Script sets to 0.0 when eFermi out of range
+        assert eout_entry['is_metal'] == "False" # band_gap 0.1
+
+
     captured = capsys.readouterr()
     assert f"Successfully processed and saved data for {num_valid_entries} materials" in captured.out
     assert "Skipping None entry for SuperCon composition: NoneEntryFe" in captured.out
@@ -530,8 +547,7 @@ def test_process_data_with_new_format(m_dos_from_dict, m_struct_from_str, m_stru
     assert "Pymatgen parsing/feature extraction failed for mp-456" not in captured.out # Should be graceful
     assert "DOS processing failed for mp-789" not in captured.out # Should be graceful if dos_object_mp is None
     assert "material_id not found in document for ValidEntryNoMaterialId" in captured.out
-    # Check that the specific warning for Fermi level outside range or missing eFermi is NOT present for these mocks
-    assert "Fermi level" not in captured.out
+    assert "Fermi level 5.0 for mp-eout is outside DOS energy range [-1, 1]. Setting dos_at_fermi to 0." in captured.out
 
     # Clean up (tmp_path handles this automatically for files created under it)
     # if os.path.exists(raw_json_path): os.remove(raw_json_path) # Not needed with tmp_path
