@@ -163,7 +163,15 @@ def process_data():
             except Exception as e:
                 warnings.warn(f"DOS processing failed for {material_id}: {e}")
 
+        # --- Process SuperCon Specific Features ---
+        # Retrieve critical_temperature_tc, which might be None if not present or NaN in source
+        critical_temp_tc = raw_material_doc.get('critical_temperature_tc')
+        processed_doc['critical_temperature_tc'] = critical_temp_tc
+
         # --- Set Target Columns ---
+        # These typically mirror some of the processed features or are derived further.
+        # For now, 'critical_temperature_tc' is not directly a target for typical MP-based models,
+        # but could be if the project's focus shifts.
         processed_doc['target_band_gap'] = processed_doc.get('band_gap_mp')
         processed_doc['target_formation_energy'] = processed_doc.get('formation_energy_per_atom_mp')
         processed_doc['target_is_metal'] = processed_doc.get('is_metal')

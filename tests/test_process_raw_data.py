@@ -402,23 +402,28 @@ def test_process_data_with_new_format(m_dos_from_dict, m_struct_from_str, m_stru
     sample_input_dict = {
         "ValidEntryCu": {
             "material_id": "mp-123", "cif_string_mp": "CIF_Cu", "band_gap": 1.0, "formation_energy_per_atom": -0.5,
-            "dos_object_mp": {"efermi": 0.0, "energies": [-1,0,1], "densities": {"1":[0.1,0.2,0.3]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"}
+            "dos_object_mp": {"efermi": 0.0, "energies": [-1,0,1], "densities": {"1":[0.1,0.2,0.3]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"},
+            "critical_temperature_tc": 5.2
         },
         "NoneEntryFe": None,
         "MissingCifBaKFeAs": {
             "material_id": "mp-456", "cif_string_mp": None, "band_gap": 0.0, "formation_energy_per_atom": -1.2,
-            "dos_object_mp": {"efermi": 0.5, "energies": [-0.5,0.5,1.5], "densities": {"1":[0.4,0.5,0.6]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"}
+            "dos_object_mp": {"efermi": 0.5, "energies": [-0.5,0.5,1.5], "densities": {"1":[0.4,0.5,0.6]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"},
+            "critical_temperature_tc": 15.0 # Added tc here as well
         },
         "MissingDosSi": {
-            "material_id": "mp-789", "cif_string_mp": "CIF_Si", "band_gap": 0.5, "formation_energy_per_atom": -0.8, "dos_object_mp": None
+            "material_id": "mp-789", "cif_string_mp": "CIF_Si", "band_gap": 0.5, "formation_energy_per_atom": -0.8, "dos_object_mp": None,
+            "critical_temperature_tc": None # Explicitly None tc
         },
         "ValidEntryNoMaterialId": { # Test fallback for material_id
             "cif_string_mp": "CIF_NoMatId", "band_gap": 0.1, "formation_energy_per_atom": -0.2,
-            "dos_object_mp": {"efermi": 0.0, "energies": [-1,0,1], "densities": {"1":[0.1,0.2,0.3]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"}
+            "dos_object_mp": {"efermi": 0.0, "energies": [-1,0,1], "densities": {"1":[0.1,0.2,0.3]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"},
+            "critical_temperature_tc": 0.5
         },
         "EfermiOutOfRange": {
             "material_id": "mp-eout", "cif_string_mp": "CIF_Eout", "band_gap": 0.1, "formation_energy_per_atom": -0.3,
-            "dos_object_mp": {"efermi": 5.0, "energies": [-1,0,1], "densities": {"1":[0.1,0.2,0.3]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"}
+            "dos_object_mp": {"efermi": 5.0, "energies": [-1,0,1], "densities": {"1":[0.1,0.2,0.3]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"},
+            "critical_temperature_tc": 20.1
         }
     }
     raw_json_path = mock_raw_dict_data_file(sample_input_dict, filename="test_sample_new_format.json")
@@ -503,6 +508,7 @@ def test_process_data_with_new_format(m_dos_from_dict, m_struct_from_str, m_stru
         assert cu_entry['dos_at_fermi'] == "0.123" # From mock_dos
         assert cu_entry['formula_pretty'] == "MockFormula" # From mock_structure
         assert cu_entry['is_metal'] == "False" # band_gap 1.0
+        assert cu_entry['critical_temperature_tc'] == "5.2"
 
         # Entry 2: MissingCifBaKFeAs
         bakfeas_entry = next(r for r in results if r['supercon_composition'] == "MissingCifBaKFeAs")
@@ -513,6 +519,7 @@ def test_process_data_with_new_format(m_dos_from_dict, m_struct_from_str, m_stru
         assert bakfeas_entry['formula_pretty'] is None or bakfeas_entry['formula_pretty'] == "" # No CIF
         assert bakfeas_entry['density_pg'] is None or bakfeas_entry['density_pg'] == ""
         assert bakfeas_entry['is_metal'] == "True" # band_gap 0.0
+        assert bakfeas_entry['critical_temperature_tc'] == "15.0"
 
         # Entry 3: MissingDosSi
         si_entry = next(r for r in results if r['supercon_composition'] == "MissingDosSi")
@@ -522,6 +529,7 @@ def test_process_data_with_new_format(m_dos_from_dict, m_struct_from_str, m_stru
         assert si_entry['dos_at_fermi'] is None or si_entry['dos_at_fermi'] == "" # DOS object was None
         assert si_entry['formula_pretty'] == "MockFormula" # Has CIF
         assert si_entry['is_metal'] == "False" # band_gap 0.5
+        assert si_entry['critical_temperature_tc'] == "" # None should result in empty string in CSV
 
         # Entry 4: ValidEntryNoMaterialId
         no_matid_entry = next(r for r in results if r['supercon_composition'] == "ValidEntryNoMaterialId")
@@ -530,6 +538,7 @@ def test_process_data_with_new_format(m_dos_from_dict, m_struct_from_str, m_stru
         assert no_matid_entry['formation_energy_per_atom_mp'] == "-0.2"
         assert no_matid_entry['dos_at_fermi'] == "0.123"
         assert no_matid_entry['is_metal'] == "False" # band_gap 0.1
+        assert no_matid_entry['critical_temperature_tc'] == "0.5"
 
         # Entry 5: EfermiOutOfRange
         eout_entry = next(r for r in results if r['supercon_composition'] == "EfermiOutOfRange")
@@ -538,6 +547,7 @@ def test_process_data_with_new_format(m_dos_from_dict, m_struct_from_str, m_stru
         assert eout_entry['formation_energy_per_atom_mp'] == "-0.3"
         assert eout_entry['dos_at_fermi'] == "0.0" # Script sets to 0.0 when eFermi out of range
         assert eout_entry['is_metal'] == "False" # band_gap 0.1
+        assert eout_entry['critical_temperature_tc'] == "20.1"
 
 
     captured = capsys.readouterr()

@@ -16,27 +16,50 @@ from pymatgen.core import Composition, Structure # Ensure Structure is imported
 
 def get_supercon_compositions(csv_path="data/supercon_processed.csv"):
     """
-    Reads unique compositions from the supercon_processed.csv file.
+    Reads unique compositions and their critical temperatures (tc)
+    from the supercon_processed.csv file.
+    Returns a dictionary mapping composition string to tc value.
     """
     if not os.path.exists(csv_path):
-        warnings.warn(f"Source CSV file for compositions not found: {csv_path}", UserWarning)
-        # Depending on desired behavior, could try to run a prerequisite script here
-        # For now, just return empty list if not found after warning.
-        return []
+        warnings.warn(f"Source CSV file for compositions and tc not found: {csv_path}", UserWarning)
+        return {}
     try:
         df = pd.read_csv(csv_path)
-        if 'composition' not in df.columns:
-            warnings.warn(f"'composition' column not found in {csv_path}. Cannot extract compositions.", UserWarning)
-            return []
-        unique_comps = df['composition'].unique().tolist()
-        print(f"Read {len(unique_comps)} unique compositions from {csv_path}")
-        return unique_comps
+        if 'composition' not in df.columns or 'tc' not in df.columns:
+            warnings.warn(f"Required columns 'composition' and/or 'tc' not found in {csv_path}. Cannot extract composition-tc map.", UserWarning)
+            return {}
+
+        # Drop rows where 'composition' is NaN/empty, as they are not useful
+        df.dropna(subset=['composition'], inplace=True)
+        if df.empty:
+            warnings.warn(f"No valid compositions found in {csv_path} after dropping NaN compositions.", UserWarning)
+            return {}
+
+        # Handle duplicate compositions: keep the first occurrence
+        df_unique_comps = df.drop_duplicates(subset=['composition'], keep='first')
+
+        comp_to_tc_map = {}
+        for index, row in df_unique_comps.iterrows():
+            comp = str(row['composition'])
+            tc_val = row['tc']
+            try:
+                # Ensure tc_val is a float or None if it's NaN or unconvertible
+                if pd.isna(tc_val):
+                    comp_to_tc_map[comp] = None
+                else:
+                    comp_to_tc_map[comp] = float(tc_val)
+            except ValueError:
+                warnings.warn(f"Could not convert tc value '{tc_val}' to float for composition '{comp}'. Storing as None.", UserWarning)
+                comp_to_tc_map[comp] = None
+
+        print(f"Read {len(comp_to_tc_map)} unique compositions and their tc values from {csv_path}")
+        return comp_to_tc_map
     except pd.errors.EmptyDataError:
         warnings.warn(f"Warning: The file {csv_path} is empty.", UserWarning)
-        return []
+        return {}
     except Exception as e:
         warnings.warn(f"Error reading or processing {csv_path}: {e}", UserWarning)
-        return []
+        return {}
 
 def select_best_mp_entry(mp_entries_list):
     """
@@ -85,20 +108,17 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
         mp_api_key_from_config = full_config.get("mp_api_key")
         fetch_config_params = full_config.get("fetch_data", {})
 
-    supercon_compositions_csv_path = fetch_config_params.get('supercon_processed_csv_path', "data/supercon_processed.csv") # Make path configurable
-    target_compositions = get_supercon_compositions(supercon_compositions_csv_path)
+    supercon_compositions_csv_path = fetch_config_params.get('supercon_processed_csv_path', "data/supercon_processed.csv")
+    comp_to_tc_map = get_supercon_compositions(supercon_compositions_csv_path) # Renamed variable
 
-    output_filename = fetch_config_params.get('output_filename', "data/mp_raw_data.json") # Consider a new default output name
-    if not target_compositions:
-        print("No target compositions loaded from CSV. Exiting.")
-        # Ensure output JSON is empty or not written if no compositions
-        if os.path.exists(output_filename): # If an old file exists, maybe clear it or leave as is based on desired behavior.
-            # For now, we'll just proceed and it will save an empty list if raw_materials_data remains empty.
-            pass
+    output_filename = fetch_config_params.get('output_filename', "data/mp_raw_data.json")
+    if not comp_to_tc_map: # Check if the map is empty
+        print("No composition-tc map loaded from CSV. Exiting.")
+        # Ensure output JSON is empty (dictionary for map) or not written
         with open(output_filename, 'w') as f:
-             json.dump([], f) # Write empty list if no targets
-        print(f"Saved empty list to {output_filename} as no target compositions were found.")
-        return # Exit if no compositions to process
+             json.dump({}, f) # Write empty dict if no targets
+        print(f"Saved empty dictionary to {output_filename} as no composition-tc map was found.")
+        return
 
     # Get API key: Prioritize config, then environment variable
     api_key = mp_api_key_from_config if mp_api_key_from_config and mp_api_key_from_config != "YOUR_MP_API_KEY" else os.environ.get("MP_API_KEY")
@@ -150,7 +170,8 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
 
         processed_composition_count = 0
 
-        for supercon_comp_str in target_compositions:
+        # Iterate over the keys (compositions) of the map
+        for supercon_comp_str in comp_to_tc_map.keys():
             # Optional: Implement a global material limit if needed
             # if not fetchAll and some_overall_counter >= max_total_materials_config:
             #     print(f"Reached overall material limit. Stopping.")
@@ -341,9 +362,20 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
                     best_entry_dict.setdefault('cif_string_mp', None)
                     best_entry_dict.setdefault('dos_object_mp', None)
 
+                # Add critical temperature to the best_entry_dict
+                tc_value = comp_to_tc_map.get(supercon_comp_str) # Get tc for the current composition
+                if tc_value is not None: # Only add if tc_value is not None (it could be None if NaN in CSV)
+                    best_entry_dict['critical_temperature_tc'] = tc_value
+                else:
+                    # If tc_value is None from the map, explicitly set it or decide not to add the key
+                    best_entry_dict['critical_temperature_tc'] = None # Or simply don't add the key if that's preferred
+
                 all_materials_data_map[supercon_comp_str] = best_entry_dict
         else:
             print(f"  No suitable best entry found by select_best_mp_entry from {len(current_detailed_candidates)} detailed candidates for {supercon_comp_str}.")
+            # Store None for the material data, but we might still want to store its Tc if available
+            # However, current logic ties Tc to best_entry_dict. If best_entry_dict is None, Tc is not added here.
+            # This is acceptable as process_raw_data expects material data or None.
             all_materials_data_map[supercon_comp_str] = None
 
     # End of the new main processing loop
