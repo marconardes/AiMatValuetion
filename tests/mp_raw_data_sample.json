@@ -11,6 +11,7 @@
       "@module": "pymatgen.electronic_structure.dos",
       "@class": "CompleteDos"
     },
+    "critical_temperature_tc": 5.2,
     "some_other_mp_field": "value1"
   },
   "NoneEntryFe": null,
@@ -26,6 +27,7 @@
       "@module": "pymatgen.electronic_structure.dos",
       "@class": "CompleteDos"
     },
+    "critical_temperature_tc": 15.0,
     "another_field": "value2"
   },
   "MissingDosSi": {
@@ -34,6 +36,7 @@
     "band_gap": 0.5,
     "formation_energy_per_atom": -0.8,
     "dos_object_mp": null,
+    "critical_temperature_tc": null,
     "yet_another_field": "value3"
   },
   "ValidEntryNoMaterialId": {
@@ -46,6 +49,21 @@
       "densities": {"1": [0.1, 0.2, 0.3]},
       "@module": "pymatgen.electronic_structure.dos",
       "@class": "CompleteDos"
-    }
+    },
+    "critical_temperature_tc": 0.5
+  },
+  "EfermiOutOfRange": {
+    "material_id": "mp-eout",
+    "cif_string_mp": "CIF_Eout",
+    "band_gap": 0.1,
+    "formation_energy_per_atom": -0.3,
+    "dos_object_mp": {
+      "efermi": 5.0,
+      "energies": [-1,0,1],
+      "densities": {"1":[0.1,0.2,0.3]},
+      "@module":"pymatgen.electronic_structure.dos",
+      "@class":"CompleteDos"
+    },
+    "critical_temperature_tc": 20.1
   }
 }

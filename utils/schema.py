@@ -5,6 +5,7 @@
 DATA_SCHEMA = {
     "material_id": "Materials Project ID (e.g., mp-123)",
     "supercon_composition": "Original SuperCon composition string (e.g., 'Ba0.6K0.4Fe2As2')",
+    "critical_temperature_tc": "Critical temperature (K) from SuperCon dataset",
     "cif_string": "Crystallographic Information File as a string",
     "band_gap_mp": "Band Gap (eV) directly from MP",
     "formation_energy_per_atom_mp": "Formation Energy (eV/atom) directly from MP",
