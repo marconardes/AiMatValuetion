@@ -116,10 +116,18 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
     # criteria_sets related variables removed as they are no longer used by the primary logic.
 
     # Fields for the initial summary search
-    summary_fields = [
+    initial_search_fields = [
         "material_id", "formula_pretty", "nelements",
-        "band_gap", "formation_energy_per_atom", "energy_above_hull", # Added energy_above_hull
-        "volume", "density", "deprecated", "theoretical", "experimental_description" # Added more fields
+        "composition_reduced", "chemsys", "deprecated"
+        # "elements" # Also available and could be useful for precise chemsys construction if needed
+    ]
+
+    detailed_summary_fields = [
+        "material_id", "formula_pretty", "nelements", "band_gap",
+        "formation_energy_per_atom", "energy_above_hull", "volume",
+        "density", "deprecated", "theoretical",
+        # Add any other fields that mpr.materials.summary.search supports and are needed
+        # "symmetry", "structure" # Structure from summary might be minimal, full structure fetched later
     ]
 
     # summary_docs_cache removed as it's no longer used.
@@ -130,7 +138,7 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
     with MPRester(api_key=api_key) as mpr:
         # Old Fe-based fetching logic (summary_docs_cache, criteria_sets loop) fully removed.
         # New logic starts here.
-        all_materials_data_map = {} # This will store the final data
+        supercon_to_initial_candidates = {} # Changed variable name for clarity in this step
 
         # max_total_materials_config needs to be re-evaluated in this new context.
         # For now, we'll fetch for all target_compositions.
@@ -160,7 +168,7 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
                 # Query using chemsys. This is generally more robust for matching.
                 current_mp_entries = mpr.materials.search(
                     chemsys=chemical_system,
-                    fields=summary_fields
+                    fields=initial_search_fields
                 )
 
                 relevant_entries = []
@@ -181,78 +189,168 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
                         # If no exact reduced formula match, we might consider all non-deprecated theoretical entries from the chemsys later
                         # For now, only take exact reduced formula matches.
 
-                    # if relevant_entries: # Old logic
-                    #     print(f"    Selected {len(relevant_entries)} entries matching reduced formula '{reduced_formula}' and filters.")
-                    #     all_materials_data_map[supercon_comp_str] = relevant_entries # Old logic
+                    # Client-side filtering for entries that are not deprecated
+                    # Also, try to match the reduced formula as a heuristic (though chemsys should be primary)
+                    for doc in current_mp_entries:
+                        if hasattr(doc, 'deprecated') and doc.deprecated:
+                            continue # Skip deprecated materials
+
+                        # Ensure 'composition_reduced' is present if we want to filter by it
+                        # For now, we'll take all non-deprecated entries from the chemsys search
+                        # and rely on 'select_best_mp_entry' later if further filtering by formula is needed on more detailed data.
+                        # The main point of this initial search is to get material_ids for a given chemical system.
+
+                        # Store the initial search result (minimal dict from model_dump)
+                        relevant_entries.append(doc.model_dump())
+
+
                     if relevant_entries:
-                        best_entry_dict = select_best_mp_entry(relevant_entries) # Call the new selection function
-                        if best_entry_dict: # best_entry_dict is a dictionary from model_dump()
-                            print(f"    Selected best MP entry: {best_entry_dict.get('material_id')} "
-                                  f"(EAH: {best_entry_dict.get('energy_above_hull', 'N/A')}, "
-                                  f"Form.E/atom: {best_entry_dict.get('formation_energy_per_atom', 'N/A')})")
-
-                            # Now fetch detailed data for this selected entry
-                            material_id_str = best_entry_dict.get('material_id') # material_id should be a string like "mp-xxxx"
-
-                            if not material_id_str:
-                                warnings.warn(f"    Material ID missing in selected entry for {supercon_comp_str}. Skipping detail fetch.")
-                                # Store the summary data anyway, or decide to store None if details are critical
-                                all_materials_data_map[supercon_comp_str] = best_entry_dict
-                                # continue # Continue to next supercon_comp_str # This was a bug in prompt, continue is outside this if block
-                            else:
-                                try:
-                                    print(f"      Fetching structure for {material_id_str}...")
-                                    structure_obj = mpr.get_structure_by_material_id(material_id_str) # Fetches Structure object
-                                    cif_string = structure_obj.to(fmt="cif") if structure_obj else None
-                                    best_entry_dict['cif_string_mp'] = cif_string # Add to the dict
-                                    if not cif_string:
-                                        warnings.warn(f"      Could not get CIF string for {material_id_str}")
-
-                                    print(f"      Fetching DOS for {material_id_str}...")
-                                    dos_obj = mpr.get_dos_by_material_id(material_id_str) # Fetches DOS object
-                                    dos_dict_data = dos_obj.as_dict() if dos_obj else None
-                                    best_entry_dict['dos_object_mp'] = dos_dict_data # Add to the dict
-                                    if not dos_dict_data:
-                                        warnings.warn(f"      Could not get DOS for {material_id_str}")
-
-                                except Exception as detail_exc:
-                                    warnings.warn(f"      Error fetching details (structure/DOS) for {material_id_str}: {str(detail_exc)[:200]}")
-                                    # Decide if you want to keep the summary data even if details fail
-                                    if 'cif_string_mp' not in best_entry_dict: # if it failed before adding anything
-                                        best_entry_dict['cif_string_mp'] = None
-                                    if 'dos_object_mp' not in best_entry_dict:
-                                        best_entry_dict['dos_object_mp'] = None
-
-                            all_materials_data_map[supercon_comp_str] = best_entry_dict # Store the updated dict with details
-
-                        else:
-                            # This case means select_best_mp_entry returned None
-                            print(f"    No suitable best entry found by select_best_mp_entry for {supercon_comp_str}.")
-                            all_materials_data_map[supercon_comp_str] = None
+                        print(f"    Storing {len(relevant_entries)} initial candidates for SuperCon composition {supercon_comp_str} (chemsys: {chemical_system}).")
+                        supercon_to_initial_candidates[supercon_comp_str] = relevant_entries
                     else:
-                        # If no exact formula match, consider a fallback or log as no suitable match
-                        # For now, if no exact match, we store None, this can be refined in selection step.
-                        print(f"    No entries matched reduced formula '{reduced_formula}' and filters for {chemical_system}.")
-                        all_materials_data_map[supercon_comp_str] = None
+                        # This means no non-deprecated entries were found for the chemsys
+                        print(f"    No non-deprecated entries found for chemical system {chemical_system} (from SuperCon comp {supercon_comp_str}).")
+                        supercon_to_initial_candidates[supercon_comp_str] = None
                 else:
-                    all_materials_data_map[supercon_comp_str] = None
-                    print(f"  No MP entries found for chemical system {chemical_system}.")
+                    # This means mpr.materials.search returned nothing for the chemsys
+                    supercon_to_initial_candidates[supercon_comp_str] = None
+                    print(f"  No MP entries found for chemical system {chemical_system} (from SuperCon comp {supercon_comp_str}).")
 
             except Exception as e:
                 warnings.warn(f"  Error processing or querying for SuperCon composition {supercon_comp_str}: {str(e)[:500]}")
-                all_materials_data_map[supercon_comp_str] = None
+                supercon_to_initial_candidates[supercon_comp_str] = None
 
             processed_composition_count += 1
             # Optional: add a small delay to be polite to the API
             # import time
             # time.sleep(0.05) # 50 ms delay
 
-        print(f"\nFinished querying MP for {processed_composition_count} SuperCon compositions.")
+        # print(f"\nFinished querying MP for {processed_composition_count} SuperCon compositions.") # Moved into the next block
 
+    # (This code goes after the first loop that populates supercon_to_initial_candidates)
+    # ...
+    print(f"\nFinished initial candidate search for {processed_composition_count} SuperCon compositions. Found candidates for {len(supercon_to_initial_candidates)} of them.")
+
+    all_candidate_ids = set()
+    if supercon_to_initial_candidates: # Ensure it's not empty before iterating
+        for comp_str, candidates_list in supercon_to_initial_candidates.items():
+            if candidates_list: # candidates_list is a list of dicts
+                for candidate_dict in candidates_list:
+                    if isinstance(candidate_dict, dict) and candidate_dict.get('material_id'):
+                        all_candidate_ids.add(str(candidate_dict['material_id'])) # Ensure material_id is string
+
+    detailed_summaries_map = {}
+    if all_candidate_ids:
+        unique_ids_list = list(all_candidate_ids)
+        print(f"Found {len(unique_ids_list)} unique material IDs from initial search. Fetching detailed summaries...")
+
+        try:
+            # Fetch summary documents in batches if necessary, though summary.search handles lists of IDs
+            # mp-api's summary.search can take a list of material_ids.
+            # Default limit for summary.search is 1000. If more IDs, batching might be needed,
+            # but for now, assume total unique IDs will be manageable in one call.
+            batch_size = 500 # Example batch size if needed
+            for i in range(0, len(unique_ids_list), batch_size):
+                batch_ids = unique_ids_list[i:i + batch_size]
+                print(f"  Fetching detailed summaries for batch {i//batch_size + 1} ({len(batch_ids)} IDs)...")
+                summary_docs_batch = mpr.materials.summary.search(
+                    material_ids=batch_ids,
+                    fields=detailed_summary_fields
+                )
+                if summary_docs_batch:
+                    for summary_doc in summary_docs_batch:
+                        # Ensure material_id is string for key consistency
+                        detailed_summaries_map[str(summary_doc.material_id)] = summary_doc.model_dump()
+                print(f"    Fetched {len(summary_docs_batch) if summary_docs_batch else 0} summaries for this batch.")
+
+            print(f"Successfully fetched {len(detailed_summaries_map)} detailed summaries for the unique material IDs.")
+        except Exception as e:
+            warnings.warn(f"Error fetching detailed summaries by material IDs: {str(e)[:500]}", UserWarning)
+            # detailed_summaries_map will contain whatever was fetched before the error
+    else:
+        print("No unique material IDs found from initial search. Skipping detailed summary fetch.")
+
+    # The variable `supercon_to_initial_candidates` (populated in the previous step)
+    # and `detailed_summaries_map` (populated here) will be used in the *next* step (Adapt Main Loop)
+    # to reconstruct the `all_materials_data_map` with the detailed entries.
+    # For now, the script's main data structure to be saved at the end needs to be decided.
+    # Let's temporarily adjust the saving part to save detailed_summaries_map for inspection,
+    # or comment out saving until the next step where all_materials_data_map is correctly rebuilt.
+    # For this subtask, we'll assume the final saving will be handled after all_materials_data_map is repopulated.
+    # So, no changes to the saving block in THIS subtask.
     # print(f"\nTotal materials collected after all processing: {len(raw_materials_data)}") # Old message
 
+    # New main processing loop using detailed_summaries_map
+    print("\nProcessing SuperCon compositions with detailed summaries...")
+    all_materials_data_map = {} # This will be the final map for saving
+
+    for supercon_comp_str, initial_candidates_list in supercon_to_initial_candidates.items():
+        print(f"Re-processing SuperCon composition for final selection: {supercon_comp_str}")
+
+        if not initial_candidates_list: # Should be a list of minimal dicts
+            all_materials_data_map[supercon_comp_str] = None
+            print(f"  No initial candidates found for {supercon_comp_str}. Storing None.")
+            continue
+
+        current_detailed_candidates = []
+        for initial_candidate_dict in initial_candidates_list:
+            if not isinstance(initial_candidate_dict, dict): continue
+
+            candidate_material_id = str(initial_candidate_dict.get('material_id'))
+            detailed_summary_dict = detailed_summaries_map.get(candidate_material_id)
+
+            if detailed_summary_dict:
+                current_detailed_candidates.append(detailed_summary_dict)
+            else:
+                warnings.warn(f"  Could not find detailed summary for candidate ID {candidate_material_id} "
+                              f"of SuperCon comp {supercon_comp_str}. This ID will be skipped.", UserWarning)
+
+        if not current_detailed_candidates:
+            all_materials_data_map[supercon_comp_str] = None
+            print(f"  No detailed summaries found for any initial candidates of {supercon_comp_str}. Storing None.")
+            continue
+
+        best_entry_dict = select_best_mp_entry(current_detailed_candidates)
+
+        if best_entry_dict:
+            print(f"  Selected best MP entry: {best_entry_dict.get('material_id')} "
+                  f"(EAH: {best_entry_dict.get('energy_above_hull', 'N/A')}, "
+                  f"Form.E/atom: {best_entry_dict.get('formation_energy_per_atom', 'N/A')})")
+
+            material_id_str = str(best_entry_dict.get('material_id'))
+
+            if not material_id_str:
+                warnings.warn(f"    Material ID missing in selected entry for {supercon_comp_str}. Storing summary data only.")
+                all_materials_data_map[supercon_comp_str] = best_entry_dict
+            else:
+                # Fetch structure and DOS within the mpr context
+                try:
+                    print(f"    Fetching structure for {material_id_str}...")
+                    structure_obj = mpr.get_structure_by_material_id(material_id_str)
+                    cif_string = structure_obj.to(fmt="cif") if structure_obj else None
+                    best_entry_dict['cif_string_mp'] = cif_string
+                    if not cif_string: warnings.warn(f"      Could not get CIF string for {material_id_str}")
+
+                    print(f"    Fetching DOS for {material_id_str}...")
+                    dos_obj = mpr.get_dos_by_material_id(material_id_str)
+                    dos_dict_data = dos_obj.as_dict() if dos_obj else None
+                    best_entry_dict['dos_object_mp'] = dos_dict_data
+                    if not dos_dict_data: warnings.warn(f"      Could not get DOS for {material_id_str}")
+                except Exception as detail_exc:
+                    warnings.warn(f"    Error fetching details (structure/DOS) for {material_id_str}: {str(detail_exc)[:200]}")
+                    best_entry_dict.setdefault('cif_string_mp', None)
+                    best_entry_dict.setdefault('dos_object_mp', None)
+
+                all_materials_data_map[supercon_comp_str] = best_entry_dict
+        else:
+            print(f"  No suitable best entry found by select_best_mp_entry from {len(current_detailed_candidates)} detailed candidates for {supercon_comp_str}.")
+            all_materials_data_map[supercon_comp_str] = None
+
+    # End of the new main processing loop
+
+    # Final Saving Logic - now saves all_materials_data_map
     if all_materials_data_map: # Check if the map is not empty
-        print(f"Saving raw data to {output_filename}...")
+        print(f"\nSaving final processed data to {output_filename}...")
         try:
             # Create directory if it doesn't exist
             output_dir = os.path.dirname(output_filename)
@@ -261,16 +359,14 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
                 print(f"Created directory: {output_dir}")
 
             with open(output_filename, 'w') as f:
-                json.dump(all_materials_data_map, f, indent=4) # Save the dictionary
+                json.dump(all_materials_data_map, f, indent=4) # Save the final dictionary
 
-            # Calculate total number of MP materials fetched (now it's 1 per SuperCon comp if found)
-            # total_mp_materials_fetched = sum(len(v) for v in all_materials_data_map.values() if v is not None) # Old way
             successfully_mapped_supercon_comps = sum(1 for v in all_materials_data_map.values() if v is not None)
-            print(f"Successfully saved data for {successfully_mapped_supercon_comps} SuperCon compositions to {output_filename}.")
+            print(f"Successfully saved final processed data for {successfully_mapped_supercon_comps} SuperCon compositions to {output_filename}.")
         except Exception as e:
-            print(f"Error saving data to JSON: {e}")
+            print(f"Error saving final data to JSON: {e}")
     else:
-        print("No data collected to save.")
+        print("No final processed data collected to save.")
 
 if __name__ == "__main__":
     # The fetch_data function now loads its own config, so no need to pass max_total_materials from here
