@@ -88,7 +88,7 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
     supercon_compositions_csv_path = fetch_config_params.get('supercon_processed_csv_path', "data/supercon_processed.csv") # Make path configurable
     target_compositions = get_supercon_compositions(supercon_compositions_csv_path)
 
-    output_filename = fetch_config_params.get('output_filename', "data/mp_raw_data_from_supercon.json") # Consider a new default output name
+    output_filename = fetch_config_params.get('output_filename', "data/mp_raw_data.json") # Consider a new default output name
     if not target_compositions:
         print("No target compositions loaded from CSV. Exiting.")
         # Ensure output JSON is empty or not written if no compositions
