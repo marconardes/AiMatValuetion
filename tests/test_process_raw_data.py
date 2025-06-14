@@ -375,3 +375,164 @@ def test_process_empty_raw_data_file(tmp_path, mock_raw_data_file, mock_config_f
             captured = capsys.readouterr()
             assert "Starting processing for 0 raw material entries..." in captured.out
             assert "Successfully processed and saved data for 0 materials" in captured.out
+
+
+# --- Tests for the new data format (dict as input) ---
+
+@pytest.fixture
+def mock_raw_dict_data_file(tmp_path):
+    def _create_json_file(data_dict, filename="mp_raw_data_sample.json"):
+        file_path = tmp_path / filename
+        with open(file_path, 'w') as f:
+            json.dump(data_dict, f)
+        return str(file_path)
+    return _create_json_file
+
+# Expected CSV headers, now including 'supercon_composition'
+EXPECTED_CSV_HEADERS_NEW_FORMAT = sorted([key for key in DATA_SCHEMA.keys() if key not in ['cif_string', 'dos_object_mp']])
+
+
+@patch('scripts.process_raw_data.structure_to_graph')
+@patch('scripts.process_raw_data.Structure.from_str')
+@patch('scripts.process_raw_data.Dos.from_dict')
+def test_process_data_with_new_format(m_dos_from_dict, m_struct_from_str, m_struct_to_graph, tmp_path, mock_raw_dict_data_file, mock_config_for_processing, capsys):
+    """
+    Tests process_data with the new input format (dictionary) and inclusion of supercon_composition.
+    """
+    sample_input_dict = {
+        "ValidEntryCu": {
+            "material_id": "mp-123", "cif_string_mp": "CIF_Cu", "band_gap": 1.0, "formation_energy_per_atom": -0.5,
+            "dos_object_mp": {"efermi": 0.0, "energies": [-1,0,1], "densities": {"1":[0.1,0.2,0.3]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"}
+        },
+        "NoneEntryFe": None,
+        "MissingCifBaKFeAs": {
+            "material_id": "mp-456", "cif_string_mp": None, "band_gap": 0.0, "formation_energy_per_atom": -1.2,
+            "dos_object_mp": {"efermi": 0.5, "energies": [-0.5,0.5,1.5], "densities": {"1":[0.4,0.5,0.6]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"}
+        },
+        "MissingDosSi": {
+            "material_id": "mp-789", "cif_string_mp": "CIF_Si", "band_gap": 0.5, "formation_energy_per_atom": -0.8, "dos_object_mp": None
+        },
+        "ValidEntryNoMaterialId": { # Test fallback for material_id
+            "cif_string_mp": "CIF_NoMatId", "band_gap": 0.1, "formation_energy_per_atom": -0.2,
+            "dos_object_mp": {"efermi": 0.0, "energies": [-1,0,1], "densities": {"1":[0.1,0.2,0.3]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"}
+        }
+    }
+    raw_json_path = mock_raw_dict_data_file(sample_input_dict, filename="test_sample_new_format.json")
+    output_csv_name = "processed_new_format.csv"
+    output_csv_path = tmp_path / output_csv_name
+
+    config_val = mock_config_for_processing(raw_filename=os.path.basename(raw_json_path), output_filename=output_csv_name)
+
+    # --- Mocking Pymatgen and graph objects ---
+    # Mock Structure.from_str
+    mock_structure = MagicMock()
+    mock_composition = MagicMock()
+    mock_composition.reduced_formula = "MockFormula"
+    mock_si_element = MagicMock(); mock_si_element.symbol = 'Si'
+    mock_composition.elements = [mock_si_element]
+    mock_structure.composition = mock_composition
+    mock_structure.density = 1.0; mock_structure.volume = 10.0; mock_structure.num_sites = 1
+    mock_structure.get_space_group_info.return_value = ("P1", 1)
+    mock_structure.get_crystal_system.return_value = "triclinic"
+    mock_lattice = MagicMock(); mock_lattice.a=1; mock_lattice.b=1; mock_lattice.c=1; mock_lattice.alpha=90; mock_lattice.beta=90; mock_lattice.gamma=90
+    mock_structure.lattice = mock_lattice
+    m_struct_from_str.return_value = mock_structure
+
+    # Mock Dos.from_dict
+    mock_dos = MagicMock()
+    mock_dos.efermi = 0.0
+    mock_dos.energies = [-1,0,1]
+    mock_dos.get_dos_at_fermi.return_value = 0.123
+
+    # Side effect for Dos.from_dict to handle None input and different DOS objects if needed
+    def dos_from_dict_side_effect(dos_dict_arg):
+        if dos_dict_arg is None:
+            # This case should ideally not occur if raw_material_doc['dos_object_mp'] itself is None,
+            # as process_data should handle it. If it's called with None, it implies an issue.
+            # However, the code has `if dos_dict:` check, so this mock won't be hit with None.
+            return None
+        # Simplified: return the same mock_dos for any valid dict. More complex mocks could distinguish.
+        # Based on current sample data, mp-123, mp-456, and NoMatId entry have DOS objects.
+        if dos_dict_arg.get('efermi') == 0.0: # For "ValidEntryCu" and "ValidEntryNoMaterialId"
+            m = MagicMock(name="DosMockCuNoMatId")
+            m.efermi = 0.0; m.energies = [-1,0,1]; m.get_dos_at_fermi.return_value = 0.123
+            return m
+        elif dos_dict_arg.get('efermi') == 0.5: # For "MissingCifBaKFeAs"
+            m = MagicMock(name="DosMockBaKFeAs")
+            m.efermi = 0.5; m.energies = [-0.5,0.5,1.5]; m.get_dos_at_fermi.return_value = 0.456
+            return m
+        return MagicMock(spec=True, name="DefaultDosMockInNewTest") # Default
+    m_dos_from_dict.side_effect = dos_from_dict_side_effect
+
+    # Mock structure_to_graph
+    m_struct_to_graph.return_value = {"nodes": [], "edges": [], "num_nodes": 0, "num_edges": 0}
+
+    with patch('scripts.process_raw_data.load_config', return_value=config_val):
+        process_data()
+
+    # --- Assertions ---
+    assert output_csv_path.exists()
+
+    num_valid_entries = 0
+    for k,v in sample_input_dict.items():
+        if v is not None:
+            num_valid_entries+=1
+
+    with open(output_csv_path, 'r', newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        results = list(reader)
+
+        assert len(results) == num_valid_entries # 3 valid entries, 1 None entry, 1 no-matid valid entry
+
+        # Check headers (sorted for consistent comparison)
+        assert sorted(reader.fieldnames) == sorted(EXPECTED_CSV_HEADERS_NEW_FORMAT)
+
+        # Entry 1: ValidEntryCu
+        cu_entry = next(r for r in results if r['supercon_composition'] == "ValidEntryCu")
+        assert cu_entry['material_id'] == "mp-123"
+        assert cu_entry['band_gap_mp'] == "1.0" # CSV stores as string
+        assert cu_entry['formation_energy_per_atom_mp'] == "-0.5"
+        assert cu_entry['dos_at_fermi'] == "0.123" # From mock_dos
+        assert cu_entry['formula_pretty'] == "MockFormula" # From mock_structure
+        assert cu_entry['is_metal'] == "False" # band_gap 1.0
+
+        # Entry 2: MissingCifBaKFeAs
+        bakfeas_entry = next(r for r in results if r['supercon_composition'] == "MissingCifBaKFeAs")
+        assert bakfeas_entry['material_id'] == "mp-456"
+        assert bakfeas_entry['band_gap_mp'] == "0.0"
+        assert bakfeas_entry['formation_energy_per_atom_mp'] == "-1.2"
+        assert bakfeas_entry['dos_at_fermi'] == "0.456" # From specific mock
+        assert bakfeas_entry['formula_pretty'] is None or bakfeas_entry['formula_pretty'] == "" # No CIF
+        assert bakfeas_entry['density_pg'] is None or bakfeas_entry['density_pg'] == ""
+        assert bakfeas_entry['is_metal'] == "True" # band_gap 0.0
+
+        # Entry 3: MissingDosSi
+        si_entry = next(r for r in results if r['supercon_composition'] == "MissingDosSi")
+        assert si_entry['material_id'] == "mp-789"
+        assert si_entry['band_gap_mp'] == "0.5"
+        assert si_entry['formation_energy_per_atom_mp'] == "-0.8"
+        assert si_entry['dos_at_fermi'] is None or si_entry['dos_at_fermi'] == "" # DOS object was None
+        assert si_entry['formula_pretty'] == "MockFormula" # Has CIF
+        assert si_entry['is_metal'] == "False" # band_gap 0.5
+
+        # Entry 4: ValidEntryNoMaterialId
+        no_matid_entry = next(r for r in results if r['supercon_composition'] == "ValidEntryNoMaterialId")
+        assert no_matid_entry['material_id'] == "no_mpid_ValidEntryNoMaterialId" # Fallback ID
+        assert no_matid_entry['band_gap_mp'] == "0.1"
+        assert no_matid_entry['formation_energy_per_atom_mp'] == "-0.2"
+        assert no_matid_entry['dos_at_fermi'] == "0.123"
+        assert no_matid_entry['is_metal'] == "False" # band_gap 0.1
+
+    captured = capsys.readouterr()
+    assert f"Successfully processed and saved data for {num_valid_entries} materials" in captured.out
+    assert "Skipping None entry for SuperCon composition: NoneEntryFe" in captured.out
+    assert "CIF string missing for mp-456" in captured.out # Warning for missing CIF
+    assert "Pymatgen parsing/feature extraction failed for mp-456" not in captured.out # Should be graceful
+    assert "DOS processing failed for mp-789" not in captured.out # Should be graceful if dos_object_mp is None
+    assert "material_id not found in document for ValidEntryNoMaterialId" in captured.out
+    # Check that the specific warning for Fermi level outside range or missing eFermi is NOT present for these mocks
+    assert "Fermi level" not in captured.out
+
+    # Clean up (tmp_path handles this automatically for files created under it)
+    # if os.path.exists(raw_json_path): os.remove(raw_json_path) # Not needed with tmp_path
+    # if os.path.exists(output_csv_path): os.remove(output_csv_path)

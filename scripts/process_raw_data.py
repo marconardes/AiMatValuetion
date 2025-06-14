@@ -34,25 +34,52 @@ def process_data():
         raw_materials_data = json.load(f)
 
     processed_materials_data = []
-    print(f"Starting processing for {len(raw_materials_data)} raw material entries...")
+    # Iterating through items (supercon_composition, material_data)
+    total_materials_to_process = len(raw_materials_data)
+    print(f"Starting processing for {total_materials_to_process} raw material entries...")
 
-    for i, raw_material_doc_orig in enumerate(raw_materials_data):
-        raw_material_doc = raw_material_doc_orig # Assign to raw_material_doc, potentially overwriting if it's a string that gets parsed
-        if isinstance(raw_material_doc_orig, str):
-            try:
-                parsed_doc = json.loads(raw_material_doc_orig)
-                raw_material_doc = parsed_doc # Use the parsed dictionary
-            except json.JSONDecodeError as e:
-                warnings.warn(f"Skipping entry {i} due to JSON parsing error: {e}. Content: {raw_material_doc_orig[:100]}...")
-                continue
+    for i, (supercon_comp, raw_material_doc) in enumerate(raw_materials_data.items()):
+        # Skip if the material data is None
+        if raw_material_doc is None:
+            print(f"Skipping None entry for SuperCon composition: {supercon_comp} (at index {i})...")
+            continue
 
-        material_id = raw_material_doc.get('material_id', f"unknown_id_{i}")
-        print(f"Processing material: {material_id} ({i+1}/{len(raw_materials_data)})")
+        # The following block for handling string-encoded JSON might still be relevant
+        # if some valid entries are strings that need parsing, though less likely
+        # if the primary source (fetch_mp_data) now ensures dictionary values or None.
+        # For now, we assume raw_material_doc is already a dictionary if not None.
+        # If it can still be a string that needs parsing, the logic below would need adjustment.
+        # if isinstance(raw_material_doc, str):
+        #     try:
+        #         parsed_doc = json.loads(raw_material_doc)
+        #         raw_material_doc = parsed_doc # Use the parsed dictionary
+        #     except json.JSONDecodeError as e:
+        #         warnings.warn(f"Skipping entry {i} due to JSON parsing error: {e}. Content: {raw_material_doc[:100]}...")
+        #         continue
 
-        processed_doc = {'material_id': material_id}
+        # Ensure raw_material_doc is a dictionary before proceeding
+        if not isinstance(raw_material_doc, dict):
+            warnings.warn(f"Skipping entry {i} because it is not a dictionary: {type(raw_material_doc)}. Content: {str(raw_material_doc)[:100]}...")
+            continue
+
+        # Use a more robust way to get material_id, especially if it's nested or could be missing
+        material_id_from_doc = raw_material_doc.get('material_id')
+        if not material_id_from_doc:
+            # Fallback: use supercon_comp if material_id is missing, or a generated ID
+            material_id = f"no_mpid_{supercon_comp}" # Using supercon_comp for a more traceable fallback
+            warnings.warn(f"material_id not found in document for {supercon_comp} (index {i}). Using generated ID: {material_id}")
+        else:
+            material_id = material_id_from_doc
+
+        print(f"Processing material: {material_id} (SuperCon: {supercon_comp}) ({i+1}/{total_materials_to_process})")
+
+        processed_doc = {
+            'material_id': material_id,
+            'supercon_composition': supercon_comp # Add SuperCon composition
+        }
 
         # --- Pymatgen Feature Extraction ---
-        cif_string = raw_material_doc.get('cif_string')
+        cif_string = raw_material_doc.get('cif_string_mp') # Changed key
         if cif_string:
             try:
                 struct = Structure.from_str(cif_string, fmt="cif")
@@ -105,12 +132,12 @@ def process_data():
             processed_doc['num_graph_edges'] = None
 
         # --- Process MP Features and DOS ---
-        band_gap_mp = raw_material_doc.get('band_gap_mp')
-        processed_doc['band_gap_mp'] = band_gap_mp
-        processed_doc['formation_energy_per_atom_mp'] = raw_material_doc.get('formation_energy_per_atom_mp')
+        band_gap_val = raw_material_doc.get('band_gap') # Changed key
+        processed_doc['band_gap_mp'] = band_gap_val # Assign fetched value to the key expected by schema
+        processed_doc['formation_energy_per_atom_mp'] = raw_material_doc.get('formation_energy_per_atom') # Changed key
 
-        if band_gap_mp is not None:
-            processed_doc['is_metal'] = (band_gap_mp == 0.0)
+        if band_gap_val is not None:
+            processed_doc['is_metal'] = (band_gap_val == 0.0)
         else:
             processed_doc['is_metal'] = None
 
