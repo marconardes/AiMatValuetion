@@ -36,7 +36,16 @@ def process_data():
     processed_materials_data = []
     print(f"Starting processing for {len(raw_materials_data)} raw material entries...")
 
-    for i, raw_material_doc in enumerate(raw_materials_data):
+    for i, raw_material_doc_orig in enumerate(raw_materials_data):
+        raw_material_doc = raw_material_doc_orig # Assign to raw_material_doc, potentially overwriting if it's a string that gets parsed
+        if isinstance(raw_material_doc_orig, str):
+            try:
+                parsed_doc = json.loads(raw_material_doc_orig)
+                raw_material_doc = parsed_doc # Use the parsed dictionary
+            except json.JSONDecodeError as e:
+                warnings.warn(f"Skipping entry {i} due to JSON parsing error: {e}. Content: {raw_material_doc_orig[:100]}...")
+                continue
+
         material_id = raw_material_doc.get('material_id', f"unknown_id_{i}")
         print(f"Processing material: {material_id} ({i+1}/{len(raw_materials_data)})")
 
