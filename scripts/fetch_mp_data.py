@@ -14,19 +14,19 @@ from pymatgen.core import Composition, Structure # Ensure Structure is imported
 # the script will attempt to proceed with anonymous access via the mp-api client,
 # which may have limitations or fail for queries requiring authentication.
 
-def get_supercon_compositions(csv_path="data/supercon_processed.csv"):
+def get_supercon_compositions(csv_path="data/supercon_processed.csv", tc_column_name="tc"):
     """
-    Reads unique compositions and their critical temperatures (tc)
-    from the supercon_processed.csv file.
+    Reads unique compositions and their critical temperatures (tc_column_name)
+    from the specified CSV file.
     Returns a dictionary mapping composition string to tc value.
     """
     if not os.path.exists(csv_path):
-        warnings.warn(f"Source CSV file for compositions and tc not found: {csv_path}", UserWarning)
+        warnings.warn(f"Source CSV file for compositions and {tc_column_name} not found: {csv_path}", UserWarning)
         return {}
     try:
         df = pd.read_csv(csv_path)
-        if 'composition' not in df.columns or 'tc' not in df.columns:
-            warnings.warn(f"Required columns 'composition' and/or 'tc' not found in {csv_path}. Cannot extract composition-tc map.", UserWarning)
+        if 'composition' not in df.columns or tc_column_name not in df.columns:
+            warnings.warn(f"Required columns 'composition' and/or '{tc_column_name}' not found in {csv_path}. Cannot extract composition-tc map.", UserWarning)
             return {}
 
         # Drop rows where 'composition' is NaN/empty, as they are not useful
@@ -41,7 +41,7 @@ def get_supercon_compositions(csv_path="data/supercon_processed.csv"):
         comp_to_tc_map = {}
         for index, row in df_unique_comps.iterrows():
             comp = str(row['composition'])
-            tc_val = row['tc']
+            tc_val = row[tc_column_name] # Use the dynamic column name
             try:
                 # Ensure tc_val is a float or None if it's NaN or unconvertible
                 if pd.isna(tc_val):
@@ -49,10 +49,10 @@ def get_supercon_compositions(csv_path="data/supercon_processed.csv"):
                 else:
                     comp_to_tc_map[comp] = float(tc_val)
             except ValueError:
-                warnings.warn(f"Could not convert tc value '{tc_val}' to float for composition '{comp}'. Storing as None.", UserWarning)
+                warnings.warn(f"Could not convert {tc_column_name} value '{tc_val}' to float for composition '{comp}'. Storing as None.", UserWarning)
                 comp_to_tc_map[comp] = None
 
-        print(f"Read {len(comp_to_tc_map)} unique compositions and their tc values from {csv_path}")
+        print(f"Read {len(comp_to_tc_map)} unique compositions and their {tc_column_name} values from {csv_path}")
         return comp_to_tc_map
     except pd.errors.EmptyDataError:
         warnings.warn(f"Warning: The file {csv_path} is empty.", UserWarning)
@@ -109,7 +109,10 @@ def fetch_data(max_total_materials_arg=50): # Renamed arg to avoid conflict with
         fetch_config_params = full_config.get("fetch_data", {})
 
     supercon_compositions_csv_path = fetch_config_params.get('supercon_processed_csv_path', "data/supercon_processed.csv")
-    comp_to_tc_map = get_supercon_compositions(supercon_compositions_csv_path) # Renamed variable
+    # Retrieve tc_column_name from config, default to "tc"
+    tc_column_name = fetch_config_params.get('tc_column_name', "tc")
+
+    comp_to_tc_map = get_supercon_compositions(supercon_compositions_csv_path, tc_column_name=tc_column_name)
 
     output_filename = fetch_config_params.get('output_filename', "data/mp_raw_data.json")
     if not comp_to_tc_map: # Check if the map is empty
