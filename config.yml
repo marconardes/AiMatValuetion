@@ -3,53 +3,43 @@
 # General project settings (example)
 project_name: "OracleNet"
 version: "0.1.0"
-# Add other general settings here as needed, e.g., global random seed, logging level
 
 ################################################################################
-# Data Preparation Settings
+# GNN Data Preparation Specific Settings (used by prepare_gnn_data.py)
+################################################################################
+prepare_gnn_data:
+  # Path to the processed OQMD CSV file, input for GNN graph creation
+  processed_oqmd_csv_filename: "data/oqmd_processed.csv" # Using the test CSV
+
+  # Paths for the output graph files from prepare_gnn_data.py
+  processed_graphs_filename: "data/test_processed_graphs.pt"
+  train_graphs_filename: "data/test_train_graphs.pt"
+  val_graphs_filename: "data/test_val_graphs.pt"
+  test_graphs_filename: "data/test_test_graphs.pt"
+
+  # Data split ratios and random seed for prepare_gnn_data.py
+  train_ratio: 0.6
+  val_ratio: 0.2
+  test_ratio: 0.2 # Sums to 1.0
+  random_seed: 42
+
+################################################################################
+# Data Preparation Settings (Original - kept for reference, but prepare_gnn_data overrides for the script)
 ################################################################################
 data_preparation:
-  # Path to the input CSV file containing material compositions and properties
-  input_csv_path: "data/material_data.csv" # Example path
-  # Path where the processed graph data (list of torch_geometric.data.Data objects) will be saved
-  # This file will be used as input for GNN training.
-  output_graphs_path: "data/all_graphs.pt" # Example path
-
-  # Target properties to extract from the CSV and include in the graph data's 'y' attribute.
-  # These should be column names in your input_csv_path.
+  input_csv_path: "data/material_data.csv"
+  output_graphs_path: "data/all_graphs.pt"
   target_properties:
     - "band_gap"
     - "formation_energy_per_atom"
-    # Add other target properties here, e.g., "critical_temperature_tc" when available
-
-  # Maximum number of neighbors to consider for forming graph edges around each atom.
-  # This controls the connectivity of the graph.
   max_neighbors: 12
-
-  # Cutoff radius (in Angstroms) for defining graph edges. Atoms within this radius
-  # of each other (up to max_neighbors) will be connected by an edge.
   cutoff_radius: 3.5 # Angstroms
-
-  # Optional: Specify columns for material identifiers if they exist in your CSV.
-  # This can be useful for tracking/debugging.
-  material_id_column: "material_id" # Example, if you have a 'material_id' column
-
-  # Settings for splitting the data into training, validation, and test sets.
-  # The split is performed after generating graph objects for all materials.
+  material_id_column: "material_id"
   data_split:
-    # Fraction of the total data to be used for the training set.
     train_ratio: 0.8
-    # Fraction of the total data to be used for the validation set.
     val_ratio: 0.1
-    # Fraction of the total data to be used for the test set.
-    # test_ratio will be 1.0 - train_ratio - val_ratio
-    test_ratio: 0.1 # This is effectively determined by the other two.
-
-    # Seed for the random number generator used for shuffling data before splitting.
-    # Ensures reproducibility of the data split.
+    test_ratio: 0.1
     random_seed: 42
-
-    # Output paths for the split datasets. These will be .pt files containing lists of Data objects.
     train_graphs_path: "data/train_graphs.pt"
     val_graphs_path: "data/val_graphs.pt"
     test_graphs_path: "data/test_graphs.pt"
@@ -58,128 +48,16 @@ data_preparation:
 # OracleNet GNN Model Settings
 ################################################################################
 gnn_settings:
-  # Path to the training graph data file (output of prepare_gnn_data.py)
-  train_graphs_path: "data/train_graphs.pt"
-  # Path to the validation graph data file (output of prepare_gnn_data.py)
-  val_graphs_path: "data/val_graphs.pt"
-  # Path to the test graph data file (output of prepare_gnn_data.py)
-  test_graphs_path: "data/test_graphs.pt"
-
-  # Path where the trained GNN model weights will be saved
-  model_save_path: "data/oracle_net_gnn.pth"
-
-  # Learning rate for the GNN optimizer
+  train_graphs_path: "data/test_train_graphs.pt" # Align with test output
+  val_graphs_path: "data/test_val_graphs.pt"     # Align with test output
+  test_graphs_path: "data/test_test_graphs.pt"   # Align with test output
+  model_save_path: "data/oracle_net_gnn_test.pth"
   learning_rate: 0.001
-  # Batch size for GNN training and evaluation
-  batch_size: 32 # Consider smaller like 4 or 8 for dummy data if memory is an issue
-  # Number of training epochs for the GNN
-  epochs: 100 # Consider smaller like 5 or 10 for dummy data
-  # Number of hidden channels in the GNN layers
-  hidden_channels: 64 # Consider smaller like 16 or 32 for dummy data
-  # Index of the target variable in data.y (e.g., 0 for band_gap, 1 for formation_energy if y is [bg, fe])
-  # This is used if the GNN is trained on one of multiple targets present in the graph data.
+  batch_size: 4 # Smaller for potentially small test dataset
+  epochs: 10    # Smaller for testing
+  hidden_channels: 16
   target_index: 0
-
-  # --- Evaluation Settings ---
-  # Number of top error predictions to display during evaluation
-  num_top_errors_to_show: 5
-
-  # --- Dummy Data Generation Settings (for train_gnn_model.py and evaluate_gnn_model.py) ---
-  # These settings are used if the actual graph data files are not found,
-  # allowing the scripts to run with placeholder data.
-  # Number of node features in the dummy graph data. Must match model architecture if loading a pre-trained model.
   num_node_features_for_dummy_data: 2
-  # Number of target properties stored in the y attribute of dummy graph Data objects.
-  # For example, if y is [target1, target2], this would be 2.
-  # Must be consistent with gnn_target_index (i.e., gnn_target_index < num_targets_in_file_for_dummy_data).
   num_targets_in_file_for_dummy_data: 2
-
-# Add other major configuration sections below, e.g., for different models or experiments.
-# Example:
-# classical_ml_settings:
-#   model_type: "RandomForest"
-#   n_estimators: 100
-#   feature_set: "composition_based_only"
-#   target_property_for_classical_ml: "critical_temperature_tc"
-#   classical_model_save_path: "data/classical_tc_model.pkl"
-#   classical_train_data_path: "data/train_classical_features.csv"
-#   classical_test_data_path: "data/test_classical_features.csv"
-#   classical_val_data_path: "data/val_classical_features.csv" # If applicable
-#   classical_num_top_errors_to_show: 10
-#   classical_random_seed: 42
-#
-# feature_engineering_settings:
-#   # Settings related to how features are generated for classical ML models
-#   # e.g., choice of descriptors, normalization techniques
-#   use_magpie_features: true
-#   use_custom_descriptors:
-#     - "mean_atomic_radius"
-#     - "std_electronegativity"
-#   normalization_method: "standard_scaler" # "min_max_scaler", "none"
-#
-# hyperparameter_optimization_settings:
-#   # Settings for hyperparameter tuning frameworks like Optuna or Ray Tune
-#   # For both GNN and classical models if applicable
-#   gnn_optuna:
-#     n_trials: 50
-#     optimizer_choices: ["Adam", "RMSprop"]
-#     learning_rate_range: [0.0001, 0.01]
-#     hidden_channels_range: [32, 128]
-#     num_gnn_layers_range: [2, 5]
-#   classical_ml_optuna:
-#     n_trials: 100
-#     # Specific parameters based on model_type selected in classical_ml_settings
-#     # e.g., for RandomForest
-#     rf_n_estimators_range: [50, 300]
-#     rf_max_depth_range: [5, 50]
-#
-# active_learning_settings:
-#   # Configuration for active learning loops if implemented
-#   acquisition_function: "uncertainty_sampling" # "random_sampling", "qbc"
-#   batch_size_active_learning: 10 # Number of samples to query in each iteration
-#   max_active_learning_iterations: 20
-#   initial_training_set_size: 100 # Number of initial labeled samples
-#
-# DFT_integration_settings: # If project involves running/interfacing with DFT calculations
-#   dft_code: "VASP" # "QuantumESPRESSO", "ABINIT"
-#   pseudopotential_library: "PBE"
-#   kpoints_density: 2000 # atoms per kpoint
-#   convergence_criteria:
-#     energy_threshold_ev_per_atom: 0.0001
-#   dft_calculation_timeout_hours: 24
-#   max_dft_retries: 2
-#   dft_output_parsing_rules: # Define how to extract Tc or other properties from DFT output
-#     tc_keyword: "critical_temperature"
-#     band_gap_keyword: "band_gap"
-#
-# deployment_settings: # If the model is to be deployed
-#   # e.g., API endpoint, server configuration, prediction request format
-#   api_framework: "FastAPI" # "Flask"
-#   model_serving_platform: "Docker" # "Kubernetes", "SageMaker"
-#   prediction_input_format: "SMILES" # "CIF", "composition_string"
-#   prediction_output_format: "JSON"
-#
-# logging_and_monitoring:
-#   # Settings for experiment tracking tools like MLflow or Weights & Biases
-#   use_mlflow: false
-#   mlflow_tracking_uri: "http://localhost:5000"
-#   experiment_name_prefix: "OracleNet"
-#   log_model_checkpoints: true
-#   log_evaluation_metrics: true
-#   log_hyperparameters: true
-#
-# computational_resources:
-#   # Information about computational resources available or to be used
-#   num_gpus_available: 1
-#   preferred_gpu_ids: [0] # e.g., [0, 1] for multi-GPU training if supported
-#   max_cpu_cores_per_job: 4
-#   memory_limit_gb_per_job: 16
-#
-# reproducibility:
-#   # Global random seed for operations not covered by specific seeds elsewhere
-#   global_seed: 12345
-#   # Version control information (can be auto-updated by hooks or CI/CD)
-#   git_commit_hash: "latest"
-#   docker_image_tag: "latest"
 
 # End of config.yml
