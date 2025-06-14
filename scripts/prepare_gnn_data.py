@@ -101,16 +101,32 @@ def create_graph_dataset(config_path='config.yml'):
             continue
 
         struct = None # Initialize struct to None
+        lattice = None # Initialize lattice to None
         try:
-            # Parse unit cell parameters
-            lattice_params = json.loads(oqmd_unit_cell_json)
-            # Ensure correct number of parameters for Lattice.from_parameters
-            if len(lattice_params) != 6:
-                raise ValueError(f"Lattice parameters for {material_id} are not of length 6 (a,b,c,alpha,beta,gamma). Found: {lattice_params}")
-            lattice = Lattice.from_parameters(*lattice_params)
+            # --- Parse oqmd_unit_cell_json ---
+            parsed_cell_data = json.loads(oqmd_unit_cell_json)
 
-            # Parse sites
-            sites_data = json.loads(oqmd_sites_json)
+            if not isinstance(parsed_cell_data, list):
+                raise ValueError(f"oqmd_unit_cell_json for {material_id} did not parse into a list. Found: {type(parsed_cell_data)}. Content: {oqmd_unit_cell_json}")
+
+            # Try to detect format: 3x3 matrix or 6 parameters
+            if len(parsed_cell_data) == 3 and all(isinstance(row, list) and len(row) == 3 for row in parsed_cell_data):
+                # Assume 3x3 lattice matrix
+                # Additional check: ensure all elements in the matrix are numbers
+                if not all(isinstance(val, (int, float)) for row in parsed_cell_data for val in row):
+                    raise ValueError(f"Lattice matrix for {material_id} contains non-numeric values. Data: {parsed_cell_data}")
+                lattice = Lattice(parsed_cell_data)
+            elif len(parsed_cell_data) == 6:
+                # Assume 6 parameters [a, b, c, alpha, beta, gamma]
+                # Additional check: ensure all parameters are numbers
+                if not all(isinstance(param, (int, float)) for param in parsed_cell_data):
+                    raise ValueError(f"Lattice parameters for {material_id} are not all numeric. Data: {parsed_cell_data}")
+                lattice = Lattice.from_parameters(*parsed_cell_data)
+            else:
+                raise ValueError(f"Unsupported format for oqmd_unit_cell_json for {material_id}. Expected 6 parameters or a 3x3 matrix. Found: {parsed_cell_data}")
+
+            # --- Parse oqmd_sites_json ---
+            sites_data = json.loads(oqmd_sites_json) # This can also raise json.JSONDecodeError
             species_list = []
             coords_list = []
             for site_info in sites_data:
@@ -130,16 +146,19 @@ def create_graph_dataset(config_path='config.yml'):
             struct = Structure(lattice, species_list, coords_list, coords_are_cartesian=False)
 
         except json.JSONDecodeError as e:
-            warnings.warn(f"Error decoding JSON for structure (cell or sites) for {material_id}: {e}. Skipping.")
+            warnings.warn(f"Error decoding JSON for oqmd_unit_cell_json or oqmd_sites_json for {material_id}: {e}. Skipping.")
             skipped_structure_json_parse_error += 1
             continue
-        except ValueError as ve: # Catch ValueErrors from lattice/site processing
-            warnings.warn(f"Error processing structure JSON data for {material_id}: {ve}. Skipping.")
-            skipped_structure_json_parse_error += 1 # Or a more specific counter if needed
+        except ValueError as ve: # Catch ValueErrors from lattice/site processing or format checks
+            # Updated warning message for ValueError to be more generic or specific if possible
+            warnings.warn(f"Invalid data or format in structure JSON for {material_id}: {ve}. Skipping.")
+            skipped_structure_json_parse_error += 1
             continue
-        except Exception as e: # Catch-all for other errors during Structure creation
-            warnings.warn(f"Error creating Pymatgen Structure for {material_id} from JSON: {e}. Skipping.")
-            skipped_structure_creation_error += 1
+        except Exception as e: # Catch-all for other errors (e.g., Lattice creation errors not caught by ValueError)
+            warnings.warn(f"Error creating Pymatgen Structure components (Lattice/Sites) for {material_id}: {e}. Skipping.")
+            # This could be structure_creation_error or json_parse_error depending on where it originates
+            # If Lattice() or Lattice.from_parameters() fails with non-ValueError, it's a creation error for lattice part
+            skipped_structure_creation_error += 1 # Assuming it's more about creation than just parsing at this point
             continue
 
         if struct is None: # Should be caught by earlier continues, but as a safeguard
@@ -353,4 +372,11 @@ def create_graph_dataset(config_path='config.yml'):
     print("\nGraph dataset creation and splitting process finished.")
 
 if __name__ == "__main__":
-    create_graph_dataset()
+    import sys
+    if len(sys.argv) > 1:
+        config_file = sys.argv[1]
+        print(f"Using configuration file from command line: {config_file}")
+        create_graph_dataset(config_path=config_file)
+    else:
+        print("No configuration file provided via command line, using default.")
+        create_graph_dataset()
