@@ -132,9 +132,9 @@ def process_data():
             processed_doc['num_graph_edges'] = None
 
         # --- Process MP Features and DOS ---
-        band_gap_val = raw_material_doc.get('band_gap') # Changed key
+        band_gap_val = raw_material_doc.get('band_gap_mp') # Corrected key
         processed_doc['band_gap_mp'] = band_gap_val # Assign fetched value to the key expected by schema
-        processed_doc['formation_energy_per_atom_mp'] = raw_material_doc.get('formation_energy_per_atom') # Changed key
+        processed_doc['formation_energy_per_atom_mp'] = raw_material_doc.get('formation_energy_per_atom_mp') # Corrected key
 
         if band_gap_val is not None:
             processed_doc['is_metal'] = (band_gap_val == 0.0)
@@ -181,7 +181,7 @@ def process_data():
 
     # --- Write to CSV ---
     # Define CSV fieldnames - ensure order and exclude non-CSV fields
-    csv_fieldnames = [key for key in DATA_SCHEMA.keys() if key not in ['cif_string', 'dos_object_mp', 'graph_nodes', 'graph_edges']]
+    csv_fieldnames = [key for key in DATA_SCHEMA.keys() if key not in ['cif_string', 'dos_object_mp']] # graph_nodes and graph_edges SHOULD be in CSV if in DATA_SCHEMA
 
     # Ensure all keys in processed_doc are in csv_fieldnames, add if any are missing (e.g. due to dynamic keys)
     # However, it's better to strictly adhere to DATA_SCHEMA for CSV columns.
