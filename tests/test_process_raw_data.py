@@ -12,7 +12,7 @@ from utils.schema import DATA_SCHEMA
 # Define sample raw data for testing
 SAMPLE_RAW_MATERIAL_FULL = {
     "material_id": "mp-123",
-    "cif_string": """
+    "cif_string_mp": """ # Key changed from cif_string to cif_string_mp
 data_Si
 _symmetry_space_group_name_H-M   'F d -3 m'
 _cell_length_a   5.4300
@@ -39,7 +39,7 @@ loop_
 
 SAMPLE_RAW_MATERIAL_METAL = {
     "material_id": "mp-456",
-    "cif_string": SAMPLE_RAW_MATERIAL_FULL["cif_string"], # Reuse valid CIF
+    "cif_string_mp": SAMPLE_RAW_MATERIAL_FULL["cif_string_mp"], # Reuse valid CIF, ensure key matches
     "band_gap_mp": 0.0, # Metal
     "formation_energy_per_atom_mp": -0.5,
     "dos_object_mp": {
@@ -51,7 +51,7 @@ SAMPLE_RAW_MATERIAL_METAL = {
 
 SAMPLE_RAW_MATERIAL_MISSING_CIF = {
     "material_id": "mp-789",
-    "cif_string": None,
+    "cif_string_mp": None, # Key changed
     "band_gap_mp": 1.0,
     "formation_energy_per_atom_mp": -0.8,
     "dos_object_mp": None
@@ -59,7 +59,7 @@ SAMPLE_RAW_MATERIAL_MISSING_CIF = {
 
 SAMPLE_RAW_MATERIAL_MISSING_DOS = {
     "material_id": "mp-101",
-    "cif_string": SAMPLE_RAW_MATERIAL_FULL["cif_string"], # Reuse valid CIF
+    "cif_string_mp": SAMPLE_RAW_MATERIAL_FULL["cif_string_mp"], # Reuse valid CIF, ensure key matches
     "band_gap_mp": 0.0, # Metal
     "formation_energy_per_atom_mp": -0.2,
     "dos_object_mp": None
@@ -67,7 +67,7 @@ SAMPLE_RAW_MATERIAL_MISSING_DOS = {
 
 SAMPLE_RAW_MATERIAL_DOS_EFERMI_OUTSIDE_RANGE = {
     "material_id": "mp-112",
-    "cif_string": SAMPLE_RAW_MATERIAL_FULL["cif_string"],
+    "cif_string_mp": SAMPLE_RAW_MATERIAL_FULL["cif_string_mp"], # Key changed
     "band_gap_mp": 0.0,
     "formation_energy_per_atom_mp": -0.3,
     "dos_object_mp": {"efermi": 10.0, "energies": [-1, 0, 1], "densities": {"1": [0.1,0.2,0.3]}}
@@ -75,7 +75,7 @@ SAMPLE_RAW_MATERIAL_DOS_EFERMI_OUTSIDE_RANGE = {
 
 SAMPLE_RAW_MATERIAL_DOS_NO_EFERMI = {
     "material_id": "mp-113",
-    "cif_string": SAMPLE_RAW_MATERIAL_FULL["cif_string"],
+    "cif_string_mp": SAMPLE_RAW_MATERIAL_FULL["cif_string_mp"], # Key changed
     "band_gap_mp": 0.0,
     "formation_energy_per_atom_mp": -0.4,
     "dos_object_mp": {"energies": [-1, 0, 1], "densities": {"1": [0.1,0.2,0.3]}} # efermi key missing
@@ -83,8 +83,8 @@ SAMPLE_RAW_MATERIAL_DOS_NO_EFERMI = {
 
 
 @pytest.fixture
-def mock_raw_data_file(tmp_path):
-    def _create_json_file(data_list, filename="mp_raw_data.json"):
+def mock_raw_list_data_file(tmp_path): # Renamed to avoid confusion
+    def _create_json_file(data_list, filename="mp_raw_list_data.json"):
         file_path = tmp_path / filename
         with open(file_path, 'w') as f:
             json.dump(data_list, f)
@@ -110,7 +110,7 @@ EXPECTED_CSV_HEADERS_FROM_SCHEMA = [key for key in DATA_SCHEMA.keys() if key not
 @patch('scripts.process_raw_data.structure_to_graph') # Applied third, so it's the third mock argument m_sg
 @patch('scripts.process_raw_data.Structure.from_str')  # Applied second, so it's the second mock argument m_sfs
 @patch('scripts.process_raw_data.Dos.from_dict')       # Applied first (bottom-most), so it's the first mock argument m_dfd
-def test_successful_processing_with_mocks(m_dfd, m_sfs, m_sg, tmp_path, mock_raw_data_file, mock_config_for_processing, capsys):
+def test_successful_processing_with_mocks(m_dfd, m_sfs, m_sg, tmp_path, mock_raw_dict_data_file, mock_config_for_processing, capsys): # Use mock_raw_dict_data_file
     """Test basic successful processing with detailed mocks for pymatgen objects."""
 
     # Configure mock_structure_to_graph (m_sg)
@@ -177,8 +177,13 @@ def test_successful_processing_with_mocks(m_dfd, m_sfs, m_sg, tmp_path, mock_raw
         return MagicMock(spec=True, name="DefaultDosMock") # Default if no specific match
     m_dfd.side_effect = side_effect_dos_from_dict # m_dfd is mock for Dos.from_dict
 
-    sample_data = [SAMPLE_RAW_MATERIAL_FULL, SAMPLE_RAW_MATERIAL_METAL, SAMPLE_RAW_MATERIAL_MISSING_CIF]
-    raw_json_path = mock_raw_data_file(sample_data)
+    # Create a dictionary input, mapping supercon_composition to material_doc
+    sample_data_dict = {
+        "Supercon_mp-123": SAMPLE_RAW_MATERIAL_FULL,
+        "Supercon_mp-456": SAMPLE_RAW_MATERIAL_METAL,
+        "Supercon_mp-789": SAMPLE_RAW_MATERIAL_MISSING_CIF
+    }
+    raw_json_path = mock_raw_dict_data_file(sample_data_dict) # Use the dict fixture
     output_csv_name = "processed_test_data.csv"
 
     config_val = mock_config_for_processing(raw_filename=os.path.basename(raw_json_path), output_filename=output_csv_name)
@@ -189,11 +194,19 @@ def test_successful_processing_with_mocks(m_dfd, m_sfs, m_sg, tmp_path, mock_raw
             process_data()
 
             mock_csv_writer.writeheader.assert_called_once()
-            assert mock_csv_writer.writerow.call_count == len(sample_data)
+            assert mock_csv_writer.writerow.call_count == len(sample_data_dict)
+
+            # Helper to find row by supercon_composition
+            def get_row_by_supercon(supercon_comp_key):
+                for call_args in mock_csv_writer.writerow.call_args_list:
+                    row = call_args[0][0]
+                    if row['supercon_composition'] == supercon_comp_key:
+                        return row
+                return None
 
             # Check mp-123 (SAMPLE_RAW_MATERIAL_FULL)
-            args_full, _ = mock_csv_writer.writerow.call_args_list[0]
-            row_full = args_full[0]
+            row_full = get_row_by_supercon('Supercon_mp-123')
+            assert row_full is not None
             assert row_full['material_id'] == 'mp-123'
             assert row_full['formula_pretty'] == 'SiMock'
             assert row_full['density_pg'] == 1.23
@@ -202,22 +215,22 @@ def test_successful_processing_with_mocks(m_dfd, m_sfs, m_sg, tmp_path, mock_raw
             assert row_full['dos_at_fermi'] == 0.1
 
             # Check mp-456 (SAMPLE_RAW_MATERIAL_METAL)
-            args_metal, _ = mock_csv_writer.writerow.call_args_list[1]
-            row_metal = args_metal[0]
+            row_metal = get_row_by_supercon('Supercon_mp-456')
+            assert row_metal is not None
             assert row_metal['material_id'] == 'mp-456'
             assert row_metal['is_metal'] is True
             assert row_metal['dos_at_fermi'] == 0.5
 
             # Check mp-789 (SAMPLE_RAW_MATERIAL_MISSING_CIF)
-            args_missing_cif, _ = mock_csv_writer.writerow.call_args_list[2]
-            row_missing_cif = args_missing_cif[0]
+            row_missing_cif = get_row_by_supercon('Supercon_mp-789')
+            assert row_missing_cif is not None
             assert row_missing_cif['material_id'] == 'mp-789'
             assert row_missing_cif['formula_pretty'] is None
             assert row_missing_cif['density_pg'] is None
             assert row_missing_cif['dos_at_fermi'] is None
 
     captured = capsys.readouterr()
-    assert f"Successfully processed and saved data for {len(sample_data)} materials" in captured.out
+    assert f"Successfully processed and saved data for {len(sample_data_dict)} materials" in captured.out
 
 
 def test_missing_input_file(mock_config_for_processing, capsys):
@@ -237,13 +250,15 @@ def test_missing_input_file(mock_config_for_processing, capsys):
 
 @patch('scripts.process_raw_data.Dos.from_dict') # Keep this for DOS part
 @patch('scripts.process_raw_data.Structure.from_str') # Mock this for Structure part
-def test_pymatgen_cif_parsing_error(mock_structure_from_str, mock_dos_from_dict, tmp_path, mock_raw_data_file, mock_config_for_processing, capsys):
+def test_pymatgen_cif_parsing_error(mock_structure_from_str, mock_dos_from_dict, tmp_path, mock_raw_dict_data_file, mock_config_for_processing, capsys): # Use mock_raw_dict_data_file
     """Test handling of errors during Structure.from_str (CIF parsing)."""
-    raw_data_with_bad_cif = [{
-        "material_id": "mp-bad-cif", "cif_string": "this is not a valid cif",
+    raw_data_with_bad_cif_doc = { # This is the material document
+        "material_id": "mp-bad-cif", "cif_string_mp": "this is not a valid cif", # Key changed
         "band_gap_mp": 0.1, "formation_energy_per_atom_mp": -0.1, "dos_object_mp": None
-    }]
-    raw_json_path = mock_raw_data_file(raw_data_with_bad_cif)
+    }
+    # Create a dictionary input for process_data
+    input_dict = {"Supercon_mp-bad-cif": raw_data_with_bad_cif_doc}
+    raw_json_path = mock_raw_dict_data_file(input_dict) # Use the dict fixture
 
     mock_structure_from_str.side_effect = Exception("Mocked CIF parsing error")
 
@@ -263,11 +278,12 @@ def test_pymatgen_cif_parsing_error(mock_structure_from_str, mock_dos_from_dict,
             assert call_args['material_id'] == "mp-bad-cif"
             assert call_args['formula_pretty'] is None
             assert call_args['density_pg'] is None
+            assert call_args['supercon_composition'] == "Supercon_mp-bad-cif" # Check supercon_composition
 
 
 @patch('scripts.process_raw_data.Structure.from_str') # Mock Structure for all DOS tests too
 @patch('scripts.process_raw_data.Dos.from_dict')
-def test_dos_processing_logic(mock_dos_from_dict, mock_structure_from_str, tmp_path, mock_raw_data_file, mock_config_for_processing):
+def test_dos_processing_logic(mock_dos_from_dict, mock_structure_from_str, tmp_path, mock_raw_dict_data_file, mock_config_for_processing): # Use mock_raw_dict_data_file
     """Test various scenarios for DOS processing."""
 
     # Default mock for structure, can be overridden per test case if needed by re-patching or more complex side_effect
@@ -324,9 +340,10 @@ def test_dos_processing_logic(mock_dos_from_dict, mock_structure_from_str, tmp_p
     mock_dos_from_dict.side_effect = dos_side_effect_for_test
 
 
-    for i, (raw_material, _, expected_dos_val) in enumerate(test_cases_dos): # mock_dos_instance no longer directly used here
-        # The side_effect for mock_dos_from_dict will pick the correct mock
-        raw_json_path = mock_raw_data_file([raw_material], filename=f"raw_dos_test_{i}.json")
+    for i, (raw_material_doc, _, expected_dos_val) in enumerate(test_cases_dos): # mock_dos_instance no longer directly used here
+        supercon_key = f"Supercon_{raw_material_doc['material_id']}"
+        input_dict = {supercon_key: raw_material_doc}
+        raw_json_path = mock_raw_dict_data_file(input_dict, filename=f"raw_dos_test_{i}.json") # Use dict fixture
 
         mock_csv_writer = MagicMock()
         config_val = mock_config_for_processing(raw_filename=os.path.basename(raw_json_path), output_filename=f"out_dos_{i}.csv")
@@ -340,13 +357,14 @@ def test_dos_processing_logic(mock_dos_from_dict, mock_structure_from_str, tmp_p
                 mock_csv_writer.writerow.assert_called_once()
                 processed_output = mock_csv_writer.writerow.call_args[0][0]
 
-                assert processed_output['material_id'] == raw_material['material_id']
+                assert processed_output['material_id'] == raw_material_doc['material_id']
                 assert processed_output['dos_at_fermi'] == expected_dos_val
                 assert processed_output['target_dos_at_fermi'] == expected_dos_val
+                assert processed_output['supercon_composition'] == supercon_key
 
-                if raw_material['material_id'] == "mp-112":
+                if raw_material_doc['material_id'] == "mp-112":
                     assert any("is outside DOS energy range" in str(warn.message) for warn in w_dos)
-                if raw_material['material_id'] == "mp-113":
+                if raw_material_doc['material_id'] == "mp-113":
                     assert any("Fermi level not found" in str(warn.message) for warn in w_dos)
 
 
@@ -360,8 +378,8 @@ def test_process_data_no_config_runs(capsys):
             assert "Error: Raw data file 'data/mp_raw_data.json' not found" in captured.out
 
 # Test with a completely empty raw data file
-def test_process_empty_raw_data_file(tmp_path, mock_raw_data_file, mock_config_for_processing, capsys):
-    raw_json_path = mock_raw_data_file([])
+def test_process_empty_raw_data_file(tmp_path, mock_raw_dict_data_file, mock_config_for_processing, capsys): # Use mock_raw_dict_data_file
+    raw_json_path = mock_raw_dict_data_file({}) # Pass an empty dictionary
 
     config_val = mock_config_for_processing(raw_filename=os.path.basename(raw_json_path))
     with patch('scripts.process_raw_data.load_config', return_value=config_val):
@@ -401,27 +419,33 @@ def test_process_data_with_new_format(m_dos_from_dict, m_struct_from_str, m_stru
     """
     sample_input_dict = {
         "ValidEntryCu": {
-            "material_id": "mp-123", "cif_string_mp": "CIF_Cu", "band_gap": 1.0, "formation_energy_per_atom": -0.5,
+                "material_id": "mp-123", "cif_string_mp": "CIF_Cu",
+                "band_gap_mp": 1.0, "formation_energy_per_atom_mp": -0.5, # Corrected keys
             "dos_object_mp": {"efermi": 0.0, "energies": [-1,0,1], "densities": {"1":[0.1,0.2,0.3]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"},
             "critical_temperature_tc": 5.2
         },
         "NoneEntryFe": None,
         "MissingCifBaKFeAs": {
-            "material_id": "mp-456", "cif_string_mp": None, "band_gap": 0.0, "formation_energy_per_atom": -1.2,
+                "material_id": "mp-456", "cif_string_mp": None,
+                "band_gap_mp": 0.0, "formation_energy_per_atom_mp": -1.2, # Corrected keys
             "dos_object_mp": {"efermi": 0.5, "energies": [-0.5,0.5,1.5], "densities": {"1":[0.4,0.5,0.6]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"},
             "critical_temperature_tc": 15.0 # Added tc here as well
         },
         "MissingDosSi": {
-            "material_id": "mp-789", "cif_string_mp": "CIF_Si", "band_gap": 0.5, "formation_energy_per_atom": -0.8, "dos_object_mp": None,
+                "material_id": "mp-789", "cif_string_mp": "CIF_Si",
+                "band_gap_mp": 0.5, "formation_energy_per_atom_mp": -0.8, # Corrected keys
+                "dos_object_mp": None,
             "critical_temperature_tc": None # Explicitly None tc
         },
         "ValidEntryNoMaterialId": { # Test fallback for material_id
-            "cif_string_mp": "CIF_NoMatId", "band_gap": 0.1, "formation_energy_per_atom": -0.2,
+                "cif_string_mp": "CIF_NoMatId",
+                "band_gap_mp": 0.1, "formation_energy_per_atom_mp": -0.2, # Corrected keys
             "dos_object_mp": {"efermi": 0.0, "energies": [-1,0,1], "densities": {"1":[0.1,0.2,0.3]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"},
             "critical_temperature_tc": 0.5
         },
         "EfermiOutOfRange": {
-            "material_id": "mp-eout", "cif_string_mp": "CIF_Eout", "band_gap": 0.1, "formation_energy_per_atom": -0.3,
+                "material_id": "mp-eout", "cif_string_mp": "CIF_Eout",
+                "band_gap_mp": 0.1, "formation_energy_per_atom_mp": -0.3, # Corrected keys
             "dos_object_mp": {"efermi": 5.0, "energies": [-1,0,1], "densities": {"1":[0.1,0.2,0.3]}, "@module":"pymatgen.electronic_structure.dos","@class":"CompleteDos"},
             "critical_temperature_tc": 20.1
         }
@@ -481,7 +505,14 @@ def test_process_data_with_new_format(m_dos_from_dict, m_struct_from_str, m_stru
     m_struct_to_graph.return_value = {"nodes": [], "edges": [], "num_nodes": 0, "num_edges": 0}
 
     with patch('scripts.process_raw_data.load_config', return_value=config_val):
-        process_data()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always") # Ensure all warnings are captured
+            process_data()
+            # Check for specific warnings after process_data has run
+            assert any("CIF string missing for mp-456" in str(warn.message) for warn in w)
+            assert any("material_id not found in document for ValidEntryNoMaterialId" in str(warn.message) for warn in w)
+            assert any("Fermi level 5.0 for mp-eout is outside DOS energy range [-1, 1]" in str(warn.message) for warn in w)
+
 
     # --- Assertions ---
     assert output_csv_path.exists()
@@ -553,11 +584,12 @@ def test_process_data_with_new_format(m_dos_from_dict, m_struct_from_str, m_stru
     captured = capsys.readouterr()
     assert f"Successfully processed and saved data for {num_valid_entries} materials" in captured.out
     assert "Skipping None entry for SuperCon composition: NoneEntryFe" in captured.out
-    assert "CIF string missing for mp-456" in captured.out # Warning for missing CIF
+    # The warning assertions are now handled by warnings.catch_warnings above
+    # assert "CIF string missing for mp-456" in captured.out # Warning for missing CIF
     assert "Pymatgen parsing/feature extraction failed for mp-456" not in captured.out # Should be graceful
     assert "DOS processing failed for mp-789" not in captured.out # Should be graceful if dos_object_mp is None
-    assert "material_id not found in document for ValidEntryNoMaterialId" in captured.out
-    assert "Fermi level 5.0 for mp-eout is outside DOS energy range [-1, 1]. Setting dos_at_fermi to 0." in captured.out
+    # assert "material_id not found in document for ValidEntryNoMaterialId" in captured.out
+    # assert "Fermi level 5.0 for mp-eout is outside DOS energy range [-1, 1]. Setting dos_at_fermi to 0." in captured.out
 
     # Clean up (tmp_path handles this automatically for files created under it)
     # if os.path.exists(raw_json_path): os.remove(raw_json_path) # Not needed with tmp_path
